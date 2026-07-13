@@ -73,3 +73,46 @@ Deploy the app, test with users, and prepare the final portfolio.
 
 Built by Nikolay Prokofiev as a summer AI portfolio project.
 
+### Current working demo
+
+A user can type an educational topic into the React web app.
+
+The frontend sends that topic to the FastAPI backend.
+
+The backend returns a simple video plan.
+
+The frontend displays the video plan on the page.
+
+Example topic:
+
+```text
+How volcanoes erupt
+
+## Week 1 Reflection
+
+During Week 1, I built the foundation for AI Film Studio for Students.
+
+### What I completed
+
+- Created a GitHub repository for the project
+- Wrote the project mission and roadmap
+- Installed Python, Node.js, VS Code, and Git
+- Created a React frontend with Vite
+- Built the first homepage
+- Added a topic input form
+- Created a FastAPI backend
+- Added a health check endpoint
+- Moved the backend into the correct project structure
+- Connected the React frontend to the FastAPI backend
+
+### What I learned
+
+- How a full-stack web application is organized
+- How React is used to build the user interface
+- How React state stores user input
+- How a form sends information from the browser
+- How FastAPI creates backend API endpoints
+- How the frontend communicates with the backend using `fetch`
+- How CORS allows the frontend and backend to communicate
+- How Git and GitHub track project progress
+- How to troubleshoot folder, terminal, and virtual environment issues
