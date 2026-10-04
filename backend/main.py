@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from openai import OpenAI 
 from fastapi import FastAPI
@@ -67,21 +68,49 @@ Create a short educational video script about: {topic}
 The audience is high school students.
 The video should be approximately 60 to 90 seconds long.
 
-Structure the script with:
+Return ONLY valid JSON.
+Do not use Markdown.
+Do not use ``` code fences.
+Do not include any text before or after the JSON.
 
-1. Title
-2. Introduction
-3. Scene 1
-4. Scene 2
-5. Scene 3
-6. Conclusion
+Use exactly this structure:
 
-For each scene, include:
-- Narration: what the narrator says
-- Visual: what should appear on screen
+{{
+  "title": "Video title",
+  "introduction": {{
+    "narration": "Narration for the introduction",
+    "visual": "Description of what should appear on screen"
+  }},
+  "scenes": [
+    {{
+      "scene_number": 1,
+      "title": "Scene title",
+      "narration": "Narration for this scene",
+      "visual": "Description of what should appear on screen"
+    }},
+    {{
+      "scene_number": 2,
+      "title": "Scene title",
+      "narration": "Narration for this scene",
+      "visual": "Description of what should appear on screen"
+    }},
+    {{
+      "scene_number": 3,
+      "title": "Scene title",
+      "narration": "Narration for this scene",
+      "visual": "Description of what should appear on screen"
+    }}
+  ],
+  "conclusion": {{
+    "narration": "Narration for the conclusion",
+    "visual": "Description of what should appear on screen"
+  }}
+}}
 
-Keep the language clear, engaging, and educational.
-Do not make the script unnecessarily long.
+Create exactly 3 scenes.
+
+Keep the narration clear, engaging, accurate, and appropriate for high school students.
+Keep the complete video script suitable for approximately 60 to 90 seconds.
 """
 
     response = client.responses.create(
@@ -89,7 +118,9 @@ Do not make the script unnecessarily long.
         input=prompt
     )
 
+    script_data = json.loads(response.output_text)
+
     return {
         "topic": topic,
-        "script": response.output_text
+        "script": script_data
     }

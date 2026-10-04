@@ -95,17 +95,45 @@ function App() {
       </form>
 
       {script && (
-        <section style={{ marginTop: "30px" }}>
-          <h2>Generated Script</h2>
+        <section style={{ marginTop: "30px", textAlign: "left" }}>
+          <h2>{script.title}</h2>
 
-          <div
-            style={{
-              whiteSpace: "pre-wrap",
-              lineHeight: "1.6",
-              textAlign: "left",
-            }}
-          >
-            {script}
+          <h3>Introduction</h3>
+
+          <p>
+            <strong>Narration:</strong> {script.introduction.narration}
+          </p>
+
+          <p>
+            <strong>Visual:</strong> {script.introduction.visual}
+          </p>
+
+          {script.scenes.map((scene) => (
+            <div key={scene.scene_number} style={{ marginTop: "25px" }}>
+            <h3>
+              Scene {scene.scene_number}: {scene.title}
+            </h3>
+
+            <p>
+              <strong>Narration:</strong> {scene.narration}
+            </p>
+
+            <p>
+              <strong>Visual:</strong> {scene.visual}
+            </p>
+            </div>
+        ))}
+
+          <div style={{ marginTop: "25px" }}>
+            <h3>Conclusion</h3>
+
+          <p>
+            <strong>Narration:</strong> {script.conclusion.narration}
+          </p>
+
+          <p>
+            <strong>Visual:</strong> {script.conclusion.visual}
+          </p>
           </div>
         </section>
       )}
