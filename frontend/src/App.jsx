@@ -2,7 +2,7 @@ import { useState } from "react";
 
 function App() {
   const [topic, setTopic] = useState("");
-  const [videoPlan, setVideoPlan] = useState(null);
+  const [script, setScript] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event) {
@@ -14,21 +14,29 @@ function App() {
     }
 
     setLoading(true);
-    setVideoPlan(null);
+    setScript("");
 
     try {
-      const response = await fetch("http://localhost:8000/video-plan", {
+      const response = await fetch("http://localhost:8000/generate-script", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ topic: topic }),
+        body: JSON.stringify({
+          topic: topic,
+        }),
       });
 
       const data = await response.json();
-      setVideoPlan(data);
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      setScript(data.script);
     } catch (error) {
-      alert("Could not connect to backend API.");
+      alert("Could not connect to the AI Film Studio backend.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -36,7 +44,14 @@ function App() {
   }
 
   return (
-    <main style={{ padding: "40px", fontFamily: "Arial", maxWidth: "700px" }}>
+    <main
+      style={{
+        padding: "40px",
+        fontFamily: "Arial",
+        maxWidth: "800px",
+        margin: "0 auto",
+      }}
+    >
       <h1>AI Film Studio for Students</h1>
 
       <p>Turn any educational topic into a short narrated video using AI.</p>
@@ -59,6 +74,7 @@ function App() {
             padding: "12px",
             marginTop: "10px",
             fontSize: "16px",
+            boxSizing: "border-box",
           }}
         />
 
@@ -66,6 +82,7 @@ function App() {
 
         <button
           type="submit"
+          disabled={loading}
           style={{
             marginTop: "15px",
             padding: "12px 20px",
@@ -73,25 +90,23 @@ function App() {
             cursor: "pointer",
           }}
         >
-          {loading ? "Generating..." : "Generate Video Plan"}
+          {loading ? "Generating Script..." : "Generate Script"}
         </button>
       </form>
 
-      {videoPlan && (
+      {script && (
         <section style={{ marginTop: "30px" }}>
-          <h2>{videoPlan.title}</h2>
+          <h2>Generated Script</h2>
 
-          <p>
-            <strong>Topic:</strong> {videoPlan.topic}
-          </p>
-
-          <h3>Planned Steps</h3>
-
-          <ol>
-            {videoPlan.steps.map((step, index) => (
-              <li key={index}>{step}</li>
-            ))}
-          </ol>
+          <div
+            style={{
+              whiteSpace: "pre-wrap",
+              lineHeight: "1.6",
+              textAlign: "left",
+            }}
+          >
+            {script}
+          </div>
         </section>
       )}
     </main>
