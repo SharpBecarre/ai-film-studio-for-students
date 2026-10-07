@@ -279,18 +279,55 @@ function App() {
             textAlign: "left",
           }}
         >
+          
           <h2>Storyboard: {storyboard.title}</h2>
 
-          <p>
-            Your video is divided into {storyboard.scenes.length} scenes.
-          </p>
+          <div
+            style={{
+              backgroundColor: "#eef4ff",
+              border: "1px solid #c7d8f5",
+              borderRadius: "10px",
+              padding: "15px 20px",
+              marginTop: "15px",
+              color: "#1e3a5f",
+            }}
+          >
+            <strong>Storyboard Progress</strong>
 
-          {storyboard.scenes.map((scene) => (
+            <p style={{ marginBottom: "5px" }}>
+              {storyboard.scenes.length} of {storyboard.scenes.length} panels planned
+            </p>
+
+            <div
+              style={{
+                width: "100%",
+                height: "10px",
+                backgroundColor: "#d5e1f2",
+                borderRadius: "10px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "#2563eb",
+                }}
+              />
+            </div>
+
+            <p style={{ fontSize: "13px", marginBottom: 0 }}>
+              Script and visual descriptions ready. Images not yet generated.
+            </p>
+          </div>
+
+
+          {storyboard.scenes.map((scene, index) => (
             <div
               key={scene.scene_number}
               style={{
                 border: "1px solid #ccc",
-                borderRadius: "10px",
+                borderRadius: "12px",
                 padding: "20px",
                 marginTop: "20px",
                 backgroundColor: "#f9f9f9",
@@ -298,16 +335,110 @@ function App() {
               }}
             >
               <h3>
-                Scene {scene.scene_number}: {scene.title}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "15px",
+                    marginBottom: "15px",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#1e3a5f",
+                      color: "white",
+                      width: "45px",
+                      height: "45px",
+                      borderRadius: "10px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: "bold",
+                      fontSize: "20px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#666",
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                      }}
+                    >
+                      Storyboard Panel {index + 1}
+                    </div>
+
+                    <h3 style={{ margin: "5px 0" }}>
+                      {scene.title}
+                    </h3>
+                  </div>
+                </div>
               </h3>
 
-              <p>
-                <strong>Narration:</strong> {scene.narration}
-              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                  gap: "20px",
+                  marginTop: "15px",
+                }}
+              >
+                {/* Visual panel */}
+                <div
+                  style={{
+                    backgroundColor: "#e8f0fe",
+                    padding: "20px",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <h4>🎬 Visual</h4>
 
-              <p>
-                <strong>Visual:</strong> {scene.visual}
-              </p>
+                  {/* Image placeholder */}
+                  <div
+                    style={{
+                      width: "100%",
+                      aspectRatio: "16 / 9",
+                      backgroundColor: "#d6e3f5",
+                      border: "2px dashed #8ba9cc",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "15px",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "#526b89",
+                        fontSize: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      Image will appear here
+                    </span>
+                  </div>
+
+                  <p>{scene.visual}</p>
+                </div>
+
+                {/* Narration panel */}
+                <div
+                  style={{
+                    backgroundColor: "#f0f0f0",
+                    padding: "20px",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <h4>🎙️ Narration</h4>
+                  <p>{scene.narration}</p>
+                </div>
+              </div>
             </div>
           ))}
         </section>
