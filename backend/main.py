@@ -58,6 +58,9 @@ def create_video_plan(data: dict):
 @app.post("/generate-script")
 def generate_script(data: dict):
     topic = data.get("topic", "").strip()
+    audience = data.get("audience", "High School")
+    video_length = data.get("video_length", "60")
+    style = data.get("style", "Educational")
 
     if not topic:
         return {"error": "Please provide a topic."}
@@ -65,8 +68,13 @@ def generate_script(data: dict):
     prompt = f"""
 Create a short educational video script about: {topic}
 
-The audience is high school students.
-The video should be approximately 60 to 90 seconds long.
+Target audience: {audience}
+Target video length: approximately {video_length} seconds
+Style: {style}
+
+Adjust the vocabulary, explanations, and level of detail for the target audience.
+Adjust the amount of narration so the complete video is appropriate for the requested video length.
+Write the narration in the requested style.
 
 Return ONLY valid JSON.
 Do not use Markdown.
@@ -109,8 +117,10 @@ Use exactly this structure:
 
 Create exactly 3 scenes.
 
-Keep the narration clear, engaging, accurate, and appropriate for high school students.
-Keep the complete video script suitable for approximately 60 to 90 seconds.
+Keep the narration clear, engaging, and accurate.
+Make the complete narration appropriate for approximately {video_length} seconds.
+Make the vocabulary and explanation level appropriate for: {audience}.
+Use this presentation style: {style}.
 """
 
     response = client.responses.create(
@@ -122,5 +132,8 @@ Keep the complete video script suitable for approximately 60 to 90 seconds.
 
     return {
         "topic": topic,
+        "audience": audience,
+        "video_length": video_length,
+        "style": style,
         "script": script_data
     }

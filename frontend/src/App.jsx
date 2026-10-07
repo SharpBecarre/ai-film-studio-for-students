@@ -2,6 +2,9 @@ import { useState } from "react";
 
 function App() {
   const [topic, setTopic] = useState("");
+  const [audience, setAudience] = useState("High School");
+  const [videoLength, setVideoLength] = useState("60");
+  const [style, setStyle] = useState("Educational");
   const [script, setScript] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +27,9 @@ function App() {
         },
         body: JSON.stringify({
           topic: topic,
+          audience: audience,
+          video_length: videoLength,
+          style: style,
         }),
       });
 
@@ -77,6 +83,77 @@ function App() {
             boxSizing: "border-box",
           }}
         />
+        <div style={{ marginTop: "20px" }}>
+          <label htmlFor="audience">
+            <strong>Audience:</strong>
+          </label>
+
+          <br />
+
+          <select
+            id="audience"
+            value={audience}
+            onChange={(event) => setAudience(event.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "8px",
+              fontSize: "16px",
+            }}
+          >
+            <option value="Elementary School">Elementary School</option>
+            <option value="Middle School">Middle School</option>
+            <option value="High School">High School</option>
+            <option value="College">College</option>
+          </select>
+        </div>
+        <div style={{ marginTop: "20px" }}>
+          <label htmlFor="videoLength">
+            <strong>Video Length:</strong>
+          </label>
+
+          <br />
+
+          <select
+            id="videoLength"
+            value={videoLength}
+            onChange={(event) => setVideoLength(event.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "8px",
+              fontSize: "16px",
+            }}
+          >
+            <option value="30">30 seconds</option>
+            <option value="60">60 seconds</option>
+            <option value="90">90 seconds</option>
+          </select>
+        </div>
+        <div style={{ marginTop: "20px" }}>
+          <label htmlFor="style">
+            <strong>Style:</strong>
+          </label>
+
+          <br />
+
+          <select
+            id="style"
+            value={style}
+            onChange={(event) => setStyle(event.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "8px",
+              fontSize: "16px",
+            }}
+          >
+            <option value="Educational">Educational</option>
+            <option value="Fun">Fun</option>
+            <option value="Documentary">Documentary</option>
+            <option value="Storytelling">Storytelling</option>
+          </select>
+        </div>
 
         <br />
 
