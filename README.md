@@ -117,3 +117,41 @@ Example topic:
 ```text
 How volcanoes erupt
 
+## Week 2 — AI Script Generator (Days 8–14)
+
+### What I Built
+
+During Week 2, I connected my AI Film Studio application to the OpenAI API and created a working AI script generator.
+
+The application now allows users to:
+
+- Enter an educational video topic.
+- Select an audience: Elementary School, Middle School, High School, or College.
+- Choose a video length: 30, 60, or 90 seconds.
+- Select a presentation style: Educational, Fun, Documentary, or Storytelling.
+- Generate a structured AI script with a title, introduction, three scenes, and conclusion.
+- View narration and visual instructions for each section.
+
+### Technologies Used
+
+- Python and FastAPI for the backend
+- React and JavaScript for the frontend
+- OpenAI API with GPT-6 Luna for script generation
+- JSON for structured data
+- Git and GitHub for version control
+
+### Testing
+
+I tested the application using five different educational topics: the fall of the Roman Empire, photosynthesis, inflation, vaccines, and how AI learns from data.
+
+All five tests generated correctly structured scripts, and the audience, length, and style settings influenced the results.
+
+### What I Learned
+
+I learned how a frontend communicates with a backend, how to send information to an AI model through an API, and how to turn an AI-generated response into structured JSON that can be displayed on a website.
+
+I also learned that AI-generated content needs testing for accuracy, consistency, and appropriate length.
+
+### Next Steps
+
+During Week 3, I plan to build a storyboard generator that turns the AI script into a sequence of scenes for video production.
