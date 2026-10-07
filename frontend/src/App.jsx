@@ -5,8 +5,12 @@ function App() {
   const [audience, setAudience] = useState("High School");
   const [videoLength, setVideoLength] = useState("60");
   const [style, setStyle] = useState("Educational");
+
   const [script, setScript] = useState("");
+  const [storyboard, setStoryboard] = useState(null);
+
   const [loading, setLoading] = useState(false);
+  const [storyboardLoading, setStoryboardLoading] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -18,6 +22,7 @@ function App() {
 
     setLoading(true);
     setScript("");
+    setStoryboard(null);
 
     try {
       const response = await fetch("http://localhost:8000/generate-script", {
@@ -48,6 +53,44 @@ function App() {
       setLoading(false);
     }
   }
+  async function handleGenerateStoryboard() {
+  if (!script) {
+    alert("Please generate a script first.");
+    return;
+  }
+
+  setStoryboardLoading(true);
+  setStoryboard(null);
+
+  try {
+    const response = await fetch(
+      "http://localhost:8000/generate-storyboard",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          script: script,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      alert(data.error || "Could not generate storyboard.");
+      return;
+    }
+
+    setStoryboard(data);
+  } catch (error) {
+    alert("Could not connect to the storyboard backend.");
+    console.error(error);
+  } finally {
+    setStoryboardLoading(false);
+  }
+}
 
   return (
     <main
@@ -212,6 +255,61 @@ function App() {
             <strong>Visual:</strong> {script.conclusion.visual}
           </p>
           </div>
+
+          <button
+          type="button"
+          onClick={handleGenerateStoryboard}
+          disabled={storyboardLoading}
+          style={{
+            marginTop: "30px",
+            padding: "12px 20px",
+            fontSize: "16px",
+            cursor: storyboardLoading ? "not-allowed" : "pointer",
+          }}
+        >
+          {storyboardLoading ? "Generating Storyboard..." : "Generate Storyboard"}
+        </button>
+        </section>
+      )}
+
+      {storyboard && (
+        <section
+          style={{
+            marginTop: "40px",
+            textAlign: "left",
+          }}
+        >
+          <h2>Storyboard: {storyboard.title}</h2>
+
+          <p>
+            Your video is divided into {storyboard.scenes.length} scenes.
+          </p>
+
+          {storyboard.scenes.map((scene) => (
+            <div
+              key={scene.scene_number}
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: "10px",
+                padding: "20px",
+                marginTop: "20px",
+                backgroundColor: "#f9f9f9",
+                color: "#222",
+              }}
+            >
+              <h3>
+                Scene {scene.scene_number}: {scene.title}
+              </h3>
+
+              <p>
+                <strong>Narration:</strong> {scene.narration}
+              </p>
+
+              <p>
+                <strong>Visual:</strong> {scene.visual}
+              </p>
+            </div>
+          ))}
         </section>
       )}
     </main>

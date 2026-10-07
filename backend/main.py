@@ -137,3 +137,46 @@ Use this presentation style: {style}.
         "style": style,
         "script": script_data
     }
+
+@app.post("/generate-storyboard")
+def generate_storyboard(data: dict):
+    script = data.get("script")
+
+    if not isinstance(script, dict):
+        return {"error": "Please provide a valid script."}
+
+    scenes = []
+
+    # Introduction
+    introduction = script.get("introduction", {})
+
+    scenes.append({
+        "scene_number": 0,
+        "title": "Introduction",
+        "narration": introduction.get("narration", ""),
+        "visual": introduction.get("visual", "")
+    })
+
+    # Main scenes
+    for scene in script.get("scenes", []):
+        scenes.append({
+            "scene_number": scene.get("scene_number"),
+            "title": scene.get("title", ""),
+            "narration": scene.get("narration", ""),
+            "visual": scene.get("visual", "")
+        })
+
+    # Conclusion
+    conclusion = script.get("conclusion", {})
+
+    scenes.append({
+        "scene_number": 4,
+        "title": "Conclusion",
+        "narration": conclusion.get("narration", ""),
+        "visual": conclusion.get("visual", "")
+    })
+
+    return {
+        "title": script.get("title", "Untitled Video"),
+        "scenes": scenes
+    }
