@@ -8,9 +8,12 @@ function App() {
 
   const [script, setScript] = useState("");
   const [storyboard, setStoryboard] = useState(null);
+  const [originalStoryboard, setOriginalStoryboard] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
+
+  
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -53,14 +56,48 @@ function App() {
       setLoading(false);
     }
   }
-  async function handleGenerateStoryboard() {
-  if (!script) {
-    alert("Please generate a script first.");
-    return;
+  
+  function handleStoryboardChange(sceneNumber, field, newValue) {
+    setStoryboard((previousStoryboard) => {
+      if (!previousStoryboard) {
+        return previousStoryboard;
+      }
+
+      return {
+        ...previousStoryboard,
+        scenes: previousStoryboard.scenes.map((scene) =>
+          scene.scene_number === sceneNumber
+            ? { ...scene, [field]: newValue }
+            : scene
+        ),
+      };
+    });
   }
+
+  function handleResetStoryboard() {
+    if (!originalStoryboard) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Reset all storyboard edits to the original AI-generated version?"
+    );
+
+    if (confirmed) {
+      setStoryboard(originalStoryboard);
+    }
+  }
+
+  async function handleGenerateStoryboard() {
+    if (!script) {
+      alert("Please generate a script first.");
+      return;
+    }
+
 
   setStoryboardLoading(true);
   setStoryboard(null);
+  setOriginalStoryboard(null);
 
   try {
     const response = await fetch(
@@ -84,6 +121,7 @@ function App() {
     }
 
     setStoryboard(data);
+    setOriginalStoryboard(data);
   } catch (error) {
     alert("Could not connect to the storyboard backend.");
     console.error(error);
@@ -281,6 +319,24 @@ function App() {
         >
           
           <h2>Storyboard: {storyboard.title}</h2>
+         
+          <button
+            type="button"
+            onClick={handleResetStoryboard}
+            style={{
+              padding: "10px 18px",
+              backgroundColor: "#fff",
+              color: "#b91c1c",
+              border: "1px solid #b91c1c",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginTop: "10px",
+              marginBottom: "10px",
+            }}
+          >
+            Reset Storyboard
+          </button>
 
           <div
             style={{
@@ -424,7 +480,30 @@ function App() {
                     </span>
                   </div>
 
-                  <p>{scene.visual}</p>
+                  <textarea
+                    aria-label={`Visual description for ${scene.title}`}
+                    value={scene.visual}
+                    onChange={(event) =>
+                      handleStoryboardChange(
+                        scene.scene_number,
+                        "visual",
+                        event.target.value
+                      )
+                    }
+                    rows={6}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "15px",
+                      lineHeight: "1.6",
+                      border: "1px solid #ccc",
+                      borderRadius: "8px",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontFamily: "Arial",
+                    }}
+                  />
+
                 </div>
 
                 {/* Narration panel */}
@@ -436,7 +515,30 @@ function App() {
                   }}
                 >
                   <h4>🎙️ Narration</h4>
-                  <p>{scene.narration}</p>
+                  <textarea
+                    aria-label={`Narration for ${scene.title}`}
+                    value={scene.narration}
+                    onChange={(event) =>
+                      handleStoryboardChange(
+                        scene.scene_number,
+                        "narration",
+                        event.target.value
+                      )
+                    }
+                    rows={6}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "15px",
+                      lineHeight: "1.6",
+                      border: "1px solid #ccc",
+                      borderRadius: "8px",
+                      boxSizing: "border-box",
+                      resize: "vertical",
+                      fontFamily: "Arial",
+                    }}
+                  />
+
                 </div>
               </div>
             </div>
