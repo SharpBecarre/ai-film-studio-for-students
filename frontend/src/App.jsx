@@ -87,6 +87,48 @@ function App() {
       setStoryboard(originalStoryboard);
     }
   }
+  
+  function handleSaveStoryboard() {
+    if (!storyboard) {
+      alert("Please generate a storyboard first.");
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        "ai-film-studio-storyboard",
+        JSON.stringify(storyboard)
+      );
+
+      alert("Storyboard saved successfully!");
+    } catch (error) {
+      console.error("Could not save storyboard:", error);
+      alert("Could not save storyboard. Please try again.");
+    }
+  }
+
+  function handleLoadStoryboard() {
+    try {
+      const savedStoryboard = localStorage.getItem(
+        "ai-film-studio-storyboard"
+      );
+
+      if (!savedStoryboard) {
+        alert("No saved storyboard found.");
+        return;
+      }
+
+      const loadedStoryboard = JSON.parse(savedStoryboard);
+
+      setStoryboard(loadedStoryboard);
+      setOriginalStoryboard(loadedStoryboard);
+
+      alert("Storyboard loaded successfully!");
+    } catch (error) {
+      console.error("Could not load storyboard:", error);
+      alert("Could not load saved storyboard.");
+    }
+  }
 
   async function handleGenerateStoryboard() {
     if (!script) {
@@ -140,6 +182,25 @@ function App() {
       }}
     >
       <h1>AI Film Studio for Students</h1>
+
+      <button
+            type="button"
+            onClick={handleLoadStoryboard}
+            style={{
+              padding: "10px 18px",
+              backgroundColor: "#16a34a",
+              color: "white",
+              border: "1px solid #16a34a",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginTop: "10px",
+              marginBottom: "10px",
+              marginLeft: "10px",
+            }}
+          >
+            Load Storyboard
+          </button>
 
       <p>Turn any educational topic into a short narrated video using AI.</p>
 
@@ -337,6 +398,27 @@ function App() {
           >
             Reset Storyboard
           </button>
+
+          <button
+            type="button"
+            onClick={handleSaveStoryboard}
+            style={{
+              padding: "10px 18px",
+              backgroundColor: "#2563eb",
+              color: "white",
+              border: "1px solid #2563eb",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginTop: "10px",
+              marginBottom: "10px",
+              marginLeft: "10px",
+            }}
+          >
+            Save Storyboard
+          </button>
+
+          
 
           <div
             style={{
