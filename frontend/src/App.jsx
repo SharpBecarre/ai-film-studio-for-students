@@ -129,6 +129,36 @@ function App() {
       alert("Could not load saved storyboard.");
     }
   }
+  
+  function handleExportStoryboard() {
+    if (!storyboard) {
+      alert("Please generate or load a storyboard first.");
+      return;
+    }
+
+    const storyboardJSON = JSON.stringify(storyboard, null, 2);
+
+    const blob = new Blob([storyboardJSON], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    const filename = (storyboard.title || "untitled-storyboard")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    link.download = `${filename || "untitled-storyboard"}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  }
 
   async function handleGenerateStoryboard() {
     if (!script) {
@@ -417,8 +447,25 @@ function App() {
           >
             Save Storyboard
           </button>
-
-          
+      
+          <button
+            type="button"
+            onClick={handleExportStoryboard}
+            style={{
+              padding: "10px 18px",
+              backgroundColor: "#7c3aed",
+              color: "white",
+              border: "1px solid #7c3aed",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginTop: "10px",
+              marginBottom: "10px",
+              marginLeft: "10px",
+            }}
+          >
+            Export Storyboard
+          </button>
 
           <div
             style={{
