@@ -13,7 +13,16 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
 
-  
+  function estimateNarrationDuration(text) {
+    if (!text || !text.trim()) {
+      return 0;
+    }
+
+    const words = text.trim().split(/\s+/).length;
+    const wordsPerMinute = 150;
+
+    return Math.ceil((words / wordsPerMinute) * 60);
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -474,6 +483,33 @@ function App() {
         >
           
           <h2>Storyboard: {storyboard.title}</h2>
+          
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#2563eb",
+              fontWeight: "bold",
+              marginTop: "8px",
+              marginBottom: "15px",
+            }}
+          >
+            Total estimated narration: {
+              Math.floor(
+                storyboard.scenes.reduce(
+                  (total, scene) =>
+                    total + estimateNarrationDuration(scene.narration),
+                  0
+                ) / 60
+              )
+            } min {
+              storyboard.scenes.reduce(
+                (total, scene) =>
+                  total + estimateNarrationDuration(scene.narration),
+                0
+              ) % 60
+            } sec
+          </p>
+
          
           <button
             type="button"
@@ -783,6 +819,18 @@ function App() {
                     }}
                   >
                     {scene.narration.length} characters
+                  </p>
+
+                  <p
+                    style={{
+                      textAlign: "right",
+                      fontSize: "12px",
+                      color: "#2563eb",
+                      marginTop: "4px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Estimated narration: {estimateNarrationDuration(scene.narration)} seconds
                   </p>
 
                 </div>
