@@ -159,6 +159,46 @@ function App() {
 
     URL.revokeObjectURL(url);
   }
+  
+  async function handleImportStoryboard(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const fileContents = await file.text();
+      const importedStoryboard = JSON.parse(fileContents);
+
+      if (
+        !importedStoryboard ||
+        typeof importedStoryboard.title !== "string" ||
+        !Array.isArray(importedStoryboard.scenes) ||
+        importedStoryboard.scenes.length === 0 ||
+        !importedStoryboard.scenes.every(
+          (scene) =>
+            typeof scene.scene_number === "number" &&
+            typeof scene.title === "string" &&
+            typeof scene.narration === "string" &&
+            typeof scene.visual === "string"
+        )
+      ) {
+        alert("Invalid storyboard file.");
+        return;
+      }
+
+      setStoryboard(importedStoryboard);
+      setOriginalStoryboard(importedStoryboard);
+
+      alert("Storyboard imported successfully!");
+    } catch (error) {
+      console.error("Could not import storyboard:", error);
+      alert("Could not import storyboard. Please select a valid JSON file.");
+    } finally {
+      event.target.value = "";
+    }
+  }
 
   async function handleGenerateStoryboard() {
     if (!script) {
@@ -231,6 +271,31 @@ function App() {
           >
             Load Storyboard
           </button>
+        
+        
+          <label
+            style={{
+              display: "inline-block",
+              padding: "10px 18px",
+              backgroundColor: "#0891b2",
+              color: "white",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginTop: "10px",
+              marginBottom: "10px",
+              marginLeft: "10px",
+            }}
+          >
+            Import Storyboard
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImportStoryboard}
+              style={{ display: "none" }}
+            />
+          </label>
+
 
       <p>Turn any educational topic into a short narrated video using AI.</p>
 
