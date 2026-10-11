@@ -24,6 +24,21 @@ function App() {
     return Math.ceil((words / wordsPerMinute) * 60);
   }
 
+  function compareNarrationToVideoLength(totalSeconds) {
+    const targetSeconds = Number(videoLength);
+    const tolerance = targetSeconds * 0.1;
+
+    if (totalSeconds > targetSeconds + tolerance) {
+      return "Too long";
+    }
+
+    if (totalSeconds < targetSeconds - tolerance) {
+      return "Shorter than target";
+    }
+
+    return "Within target";
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -510,6 +525,42 @@ function App() {
             } sec
           </p>
 
+          <p
+            style={{
+              fontSize: "14px",
+              fontWeight: "bold",
+              marginTop: "5px",
+              marginBottom: "15px",
+              color:
+                compareNarrationToVideoLength(
+                  storyboard.scenes.reduce(
+                    (total, scene) =>
+                      total + estimateNarrationDuration(scene.narration),
+                    0
+                  )
+                ) === "Within target"
+                  ? "#16a34a"
+                  : compareNarrationToVideoLength(
+                      storyboard.scenes.reduce(
+                        (total, scene) =>
+                          total + estimateNarrationDuration(scene.narration),
+                        0
+                      )
+                    ) === "Too long"
+                  ? "#dc2626"
+                  : "#d97706",
+
+            }}
+          >
+            Narration length status:{" "}
+            {compareNarrationToVideoLength(
+              storyboard.scenes.reduce(
+                (total, scene) =>
+                  total + estimateNarrationDuration(scene.narration),
+                0
+              )
+            )}
+          </p>
          
           <button
             type="button"
