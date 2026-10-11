@@ -709,6 +709,13 @@ function App() {
                         event.target.value
                       )
                     }
+                    
+                    onInput={(event) => {
+                      event.currentTarget.style.height = "auto";
+                      event.currentTarget.style.height =
+                        `${event.currentTarget.scrollHeight}px`;
+                    }}
+
                     rows={6}
                     style={{
                       width: "100%",
@@ -718,7 +725,8 @@ function App() {
                       border: "1px solid #ccc",
                       borderRadius: "8px",
                       boxSizing: "border-box",
-                      resize: "vertical",
+                      resize: "none",
+                      overflowY: "hidden",
                       fontFamily: "Arial",
                     }}
                   />
@@ -744,6 +752,13 @@ function App() {
                         event.target.value
                       )
                     }
+                                        
+                    onInput={(event) => {
+                      event.currentTarget.style.height = "auto";
+                      event.currentTarget.style.height =
+                        `${event.currentTarget.scrollHeight}px`;
+                    }}
+
                     rows={6}
                     style={{
                       width: "100%",
@@ -753,10 +768,22 @@ function App() {
                       border: "1px solid #ccc",
                       borderRadius: "8px",
                       boxSizing: "border-box",
-                      resize: "vertical",
+                      resize: "none",
+                      overflowY: "hidden",
                       fontFamily: "Arial",
                     }}
                   />
+
+                  <p
+                    style={{
+                      textAlign: "right",
+                      fontSize: "12px",
+                      color: "#64748b",
+                      marginTop: "5px",
+                    }}
+                  >
+                    {scene.narration.length} characters
+                  </p>
 
                 </div>
               </div>
