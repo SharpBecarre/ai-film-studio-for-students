@@ -272,7 +272,6 @@ function App() {
             Load Storyboard
           </button>
         
-        
           <label
             style={{
               display: "inline-block",
@@ -582,8 +581,16 @@ function App() {
                 marginTop: "20px",
                 backgroundColor: "#f9f9f9",
                 color: "#222",
+                transition: "border-color 0.2s ease",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.borderColor = "#ccc";
               }}
             >
+
               <h3>
                 <div
                   style={{
@@ -622,10 +629,28 @@ function App() {
                     >
                       Storyboard Panel {index + 1}
                     </div>
-
-                    <h3 style={{ margin: "5px 0" }}>
+                    <h3
+                      style={{
+                        margin: "5px 0",
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: "#1e293b",
+                        lineHeight: "1.4",
+                      }}
+                    >
                       {scene.title}
                     </h3>
+
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        fontSize: "12px",
+                        color: "#64748b",
+                      }}
+                    >
+                      Scene {index + 1} of {storyboard.scenes.length}
+                    </p>
+
                   </div>
                 </div>
               </h3>
