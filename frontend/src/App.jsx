@@ -39,6 +39,16 @@ function App() {
     return "Within target";
   }
 
+  function calculateDurationPercentage(totalSeconds) {
+    const targetSeconds = Number(videoLength);
+
+    if (targetSeconds <= 0) {
+      return 0;
+    }
+
+    return Math.round((totalSeconds / targetSeconds) * 100);
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -561,7 +571,73 @@ function App() {
               )
             )}
           </p>
-         
+          
+          <div style={{ marginBottom: "20px" }}>
+            <p
+              style={{
+                fontSize: "14px",
+                fontWeight: "bold",
+                color: "#475569",
+                marginBottom: "8px",
+              }}
+            >
+              Narration progress:{" "}
+              {calculateDurationPercentage(
+                storyboard.scenes.reduce(
+                  (total, scene) =>
+                    total + estimateNarrationDuration(scene.narration),
+                  0
+                )
+              )}%
+            </p>
+
+            <div
+              style={{
+                width: "100%",
+                height: "16px",
+                backgroundColor: "#e2e8f0",
+                borderRadius: "8px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(
+                    calculateDurationPercentage(
+                      storyboard.scenes.reduce(
+                        (total, scene) =>
+                          total + estimateNarrationDuration(scene.narration),
+                        0
+                      )
+                    ),
+                    100
+                  )}%`,
+                  height: "100%",
+                  backgroundColor:
+                    calculateDurationPercentage(
+                      storyboard.scenes.reduce(
+                        (total, scene) =>
+                          total + estimateNarrationDuration(scene.narration),
+                        0
+                      )
+                    ) > 110
+                      ? "#dc2626"
+                      : calculateDurationPercentage(
+                          storyboard.scenes.reduce(
+                            (total, scene) =>
+                              total + estimateNarrationDuration(scene.narration),
+                            0
+                          )
+                        ) < 90
+                      ? "#d97706"
+                      : "#16a34a",
+                  borderRadius: "8px",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={handleResetStoryboard}
