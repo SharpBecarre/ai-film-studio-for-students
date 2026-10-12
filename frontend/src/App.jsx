@@ -19,10 +19,11 @@ function App() {
       return 0;
     }
 
-    const words = text.trim().split(/\s+/).length;
-    const wordsPerMinute = 150;
+    const wordCount = text.trim().split(/\s+/).length;
 
-    return Math.ceil((wordCount / Number(narrationSpeed)) * 60);
+    return Math.ceil(
+      (wordCount / Number(narrationSpeed)) * 60
+    );
   }
 
   function countNarrationWords(text) {
@@ -147,7 +148,10 @@ function App() {
     try {
       localStorage.setItem(
         "ai-film-studio-storyboard",
-        JSON.stringify(storyboard)
+        JSON.stringify({
+          ...storyboard,
+          narrationSpeed: narrationSpeed,
+        })
       );
 
       alert("Storyboard saved successfully!");
@@ -171,6 +175,7 @@ function App() {
       const loadedStoryboard = JSON.parse(savedStoryboard);
 
       setStoryboard(loadedStoryboard);
+      setNarrationSpeed(String(loadedStoryboard.narrationSpeed || "150"));
       setOriginalStoryboard(loadedStoryboard);
 
       alert("Storyboard loaded successfully!");
