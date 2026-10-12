@@ -32,6 +32,13 @@ function App() {
     return text.trim().split(/\s+/).length;
   }
 
+  function formatNarrationTime(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${minutes} min ${seconds} sec`;
+  }
+
   function compareNarrationToVideoLength(totalSeconds) {
     const targetSeconds = Number(videoLength);
     const tolerance = targetSeconds * 0.1;
@@ -543,21 +550,14 @@ function App() {
               marginBottom: "15px",
             }}
           >
-            Total estimated narration: {
-              Math.floor(
-                storyboard.scenes.reduce(
-                  (total, scene) =>
-                    total + estimateNarrationDuration(scene.narration),
-                  0
-                ) / 60
-              )
-            } min {
+            Total estimated narration:{" "}
+            {formatNarrationTime(
               storyboard.scenes.reduce(
                 (total, scene) =>
                   total + estimateNarrationDuration(scene.narration),
                 0
-              ) % 60
-            } sec
+              )
+            )}
           </p>
 
           <p
@@ -993,7 +993,7 @@ function App() {
                       fontWeight: "bold",
                     }}
                   >
-                    Estimated narration: {estimateNarrationDuration(scene.narration)} seconds
+                    Estimated narration: {formatNarrationTime(estimateNarrationDuration(scene.narration))}
                   </p>
 
                 </div>
