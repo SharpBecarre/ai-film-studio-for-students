@@ -24,6 +24,14 @@ function App() {
     return Math.ceil((words / wordsPerMinute) * 60);
   }
 
+  function countNarrationWords(text) {
+    if (!text || !text.trim()) {
+      return 0;
+    }
+
+    return text.trim().split(/\s+/).length;
+  }
+
   function compareNarrationToVideoLength(totalSeconds) {
     const targetSeconds = Number(videoLength);
     const tolerance = targetSeconds * 0.1;
@@ -512,6 +520,23 @@ function App() {
           <p
             style={{
               fontSize: "14px",
+              color: "#475569",
+              fontWeight: "bold",
+              marginTop: "8px",
+              marginBottom: "8px",
+            }}
+          >
+            Total narration words:{" "}
+            {storyboard.scenes.reduce(
+              (total, scene) =>
+                total + countNarrationWords(scene.narration),
+              0
+            )}
+          </p>
+
+          <p
+            style={{
+              fontSize: "14px",
               color: "#2563eb",
               fontWeight: "bold",
               marginTop: "8px",
@@ -946,6 +971,17 @@ function App() {
                     }}
                   >
                     {scene.narration.length} characters
+                  </p>
+                  
+                  <p
+                    style={{
+                      textAlign: "right",
+                      fontSize: "12px",
+                      color: "#64748b",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {countNarrationWords(scene.narration)} words
                   </p>
 
                   <p
