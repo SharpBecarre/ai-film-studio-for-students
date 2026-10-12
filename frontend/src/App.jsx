@@ -4,6 +4,7 @@ function App() {
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("High School");
   const [videoLength, setVideoLength] = useState("60");
+  const [narrationSpeed, setNarrationSpeed] = useState("150");
   const [style, setStyle] = useState("Educational");
 
   const [script, setScript] = useState("");
@@ -21,7 +22,7 @@ function App() {
     const words = text.trim().split(/\s+/).length;
     const wordsPerMinute = 150;
 
-    return Math.ceil((words / wordsPerMinute) * 60);
+    return Math.ceil((wordCount / Number(narrationSpeed)) * 60);
   }
 
   function countNarrationWords(text) {
@@ -414,6 +415,36 @@ function App() {
             <option value="60">60 seconds</option>
             <option value="90">90 seconds</option>
           </select>
+          
+          <div style={{ marginTop: "15px", marginBottom: "15px" }}>
+            <label
+              htmlFor="narration-speed"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontWeight: "bold",
+              }}
+            >
+              Narration Speed
+            </label>
+
+            <select
+              id="narration-speed"
+              value={narrationSpeed}
+              onChange={(e) => setNarrationSpeed(e.target.value)}
+              style={{
+                padding: "10px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e1",
+                width: "100%",
+              }}
+            >
+              <option value="120">Slow — 120 words/minute</option>
+              <option value="150">Normal — 150 words/minute</option>
+              <option value="180">Fast — 180 words/minute</option>
+            </select>
+          </div>
+
         </div>
         <div style={{ marginTop: "20px" }}>
           <label htmlFor="style">
