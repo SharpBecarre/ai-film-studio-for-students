@@ -151,6 +151,7 @@ function App() {
         JSON.stringify({
           ...storyboard,
           narrationSpeed: narrationSpeed,
+          videoLength: videoLength,
         })
       );
 
@@ -176,6 +177,7 @@ function App() {
 
       setStoryboard(loadedStoryboard);
       setNarrationSpeed(String(loadedStoryboard.narrationSpeed || "150"));
+      setVideoLength(String(loadedStoryboard.videoLength || "60"));
       setOriginalStoryboard(loadedStoryboard);
 
       alert("Storyboard loaded successfully!");
