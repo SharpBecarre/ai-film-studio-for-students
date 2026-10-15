@@ -455,7 +455,42 @@ function App() {
               <option value="180">Fast — 180 words/minute</option>
             </select>
           </div>
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              backgroundColor: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              borderRadius: "8px",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              Project Settings
+            </h3>
 
+            <p style={{ fontSize: "14px", color: "#475569" }}>
+              <strong>Target Audience:</strong> {audience}
+            </p>
+
+            <p style={{ fontSize: "14px", color: "#475569" }}>
+              <strong>Video Length:</strong> {videoLength} seconds
+            </p>
+
+            <p style={{ fontSize: "14px", color: "#475569" }}>
+              <strong>Narration Speed:</strong>{" "}
+              {narrationSpeed === "120"
+                ? "Slow"
+                : narrationSpeed === "150"
+                ? "Normal"
+                : "Fast"}{" "}
+              ({narrationSpeed} words/minute)
+            </p>
+            
+            <p style={{ fontSize: "14px", color: "#475569" }}>
+              <strong>Video Style:</strong> {style}
+            </p>
+
+          </div>
         </div>
         <div style={{ marginTop: "20px" }}>
           <label htmlFor="style">
