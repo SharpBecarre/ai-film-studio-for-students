@@ -470,7 +470,7 @@ function App() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
                 gap: "12px",
               }}
             >
@@ -482,6 +482,8 @@ function App() {
                 padding: "12px",
                 border: "1px solid #e2e8f0",
                 borderRadius: "8px",
+                borderRadius: "8px",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                 margin: 0,
               }}
             >
@@ -496,6 +498,7 @@ function App() {
                 padding: "12px",
                 border: "1px solid #e2e8f0",
                 borderRadius: "8px",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                 margin: 0,
               }}
             >
@@ -510,6 +513,7 @@ function App() {
                 padding: "12px",
                 border: "1px solid #e2e8f0",
                 borderRadius: "8px",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                 margin: 0,
               }}
             >
@@ -530,6 +534,7 @@ function App() {
                 padding: "12px",
                 border: "1px solid #e2e8f0",
                 borderRadius: "8px",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
                 margin: 0,
               }}
             >
