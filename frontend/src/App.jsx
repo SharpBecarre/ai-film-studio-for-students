@@ -467,16 +467,52 @@ function App() {
             <h3 style={{ marginTop: 0 }}>
               Project Settings
             </h3>
-
-            <p style={{ fontSize: "14px", color: "#475569" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "12px",
+              }}
+            >
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#475569",
+                backgroundColor: "#ffffff",
+                padding: "12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                margin: 0,
+              }}
+            >
               <strong>Target Audience:</strong> {audience}
             </p>
 
-            <p style={{ fontSize: "14px", color: "#475569" }}>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#475569",
+                backgroundColor: "#ffffff",
+                padding: "12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                margin: 0,
+              }}
+            >
               <strong>Video Length:</strong> {videoLength} seconds
             </p>
 
-            <p style={{ fontSize: "14px", color: "#475569" }}>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#475569",
+                backgroundColor: "#ffffff",
+                padding: "12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                margin: 0,
+              }}
+            >
               <strong>Narration Speed:</strong>{" "}
               {narrationSpeed === "120"
                 ? "Slow"
@@ -485,13 +521,24 @@ function App() {
                 : "Fast"}{" "}
               ({narrationSpeed} words/minute)
             </p>
-            
-            <p style={{ fontSize: "14px", color: "#475569" }}>
+
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#475569",
+                backgroundColor: "#ffffff",
+                padding: "12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                margin: 0,
+              }}
+            >
               <strong>Video Style:</strong> {style}
             </p>
-
+          </div>  
           </div>
-        </div>
+          </div>
+
         <div style={{ marginTop: "20px" }}>
           <label htmlFor="style">
             <strong>Style:</strong>
