@@ -2,6 +2,7 @@ import { useState } from "react";
 
 function App() {
   const [topic, setTopic] = useState("");
+  const [projectTitle, setProjectTitle] = useState("");
   const [audience, setAudience] = useState("High School");
   const [videoLength, setVideoLength] = useState("60");
   const [narrationSpeed, setNarrationSpeed] = useState("150");
@@ -150,6 +151,7 @@ function App() {
         "ai-film-studio-storyboard",
         JSON.stringify({
           ...storyboard,
+          projectTitle: projectTitle,
           narrationSpeed: narrationSpeed,
           videoLength: videoLength, 
           audience: audience,
@@ -179,6 +181,7 @@ function App() {
 
       setStoryboard(loadedStoryboard);
       setNarrationSpeed(String(loadedStoryboard.narrationSpeed || "150"));
+      setProjectTitle(loadedStoryboard.projectTitle || "");
       setVideoLength(String(loadedStoryboard.videoLength || "60"));
       if (loadedStoryboard.audience != null) setAudience(loadedStoryboard.audience);
       if (loadedStoryboard.style != null) setStyle(loadedStoryboard.style);
@@ -360,6 +363,28 @@ function App() {
       <p>Turn any educational topic into a short narrated video using AI.</p>
 
       <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: "20px" }}>
+          <label htmlFor="project-title">
+            <strong>Project Title:</strong>
+          </label>
+
+          <br />
+
+          <input
+            id="project-title"
+            type="text"
+            value={projectTitle}
+            onChange={(event) => setProjectTitle(event.target.value)}
+            placeholder="Example: The Future Is Here"
+            style={{
+              width: "100%",
+              padding: "12px",
+              marginTop: "10px",
+              fontSize: "16px",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
         <label htmlFor="topic">
           <strong>Enter your video topic:</strong>
         </label>
@@ -465,7 +490,7 @@ function App() {
             }}
           >
             <h3 style={{ marginTop: 0 }}>
-              Project Settings
+              Project Settings 
             </h3>
             <div
               style={{
@@ -474,6 +499,9 @@ function App() {
                 gap: "12px",
               }}
             >
+            <p style={{ gridColumn: "1 / -1", margin: 0 }}>
+              <strong>Project Title:</strong> {projectTitle || "Untitled Project"}
+            </p>  
             <p
               style={{
                 fontSize: "14px",
