@@ -200,7 +200,7 @@ function App() {
       return;
     }
 
-    const storyboardJSON = JSON.stringify(storyboard, null, 2);
+    const storyboardJSON = JSON.stringify({ ...storyboard, projectTitle }, null, 2);
 
     const blob = new Blob([storyboardJSON], {
       type: "application/json",
@@ -253,6 +253,7 @@ function App() {
       }
 
       setStoryboard(importedStoryboard);
+      setProjectTitle(importedStoryboard.projectTitle || "");
       setOriginalStoryboard(importedStoryboard);
 
       alert("Storyboard imported successfully!");
