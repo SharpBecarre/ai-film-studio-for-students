@@ -385,7 +385,17 @@ function App() {
               boxSizing: "border-box",
             }}
           />
-        </div>
+          </div>
+          {!projectTitle.trim() && (
+            <p style={{ color: "#64748b", fontSize: "13px", marginTop: "6px" }}>
+              Tip: Give your film project a title so it's easy to identify later.
+            </p>
+          )}
+          {projectTitle.trim() && (
+            <p style={{ color: "#15803d", fontSize: "13px", marginTop: "6px" }}>
+              ✓ Project title entered
+            </p>
+          )}
         <label htmlFor="topic">
           <strong>Enter your video topic:</strong>
         </label>
@@ -404,6 +414,7 @@ function App() {
             marginTop: "10px",
             fontSize: "16px",
             boxSizing: "border-box",
+            border: projectTitle.trim() ? "1px solid #cbd5e1" : "2px solid #f59e0b",
           }}
         />
         <div style={{ marginTop: "20px" }}>
