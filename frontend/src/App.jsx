@@ -210,7 +210,7 @@ function App() {
 
     const link = document.createElement("a");
     link.href = url;
-    const filename = (storyboard.title || "untitled-storyboard")
+    const filename = (projectTitle.trim() || storyboard.title || "untitled-storyboard")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
