@@ -396,6 +396,14 @@ function App() {
               ✓ Project title entered
             </p>
           )}
+          <p style={{ color: "#64748b", fontSize: "12px", marginTop: "6px" }}>
+            {projectTitle.length} / 60 characters (recommended)
+          </p>
+          {projectTitle.length > 60 && (
+            <p style={{ color: "#b45309", fontSize: "13px", marginTop: "6px" }}>
+              Your project title is longer than the recommended 60 characters.
+            </p>
+          )}
         <label htmlFor="topic">
           <strong>Enter your video topic:</strong>
         </label>
