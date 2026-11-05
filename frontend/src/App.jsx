@@ -519,7 +519,7 @@ function App() {
                 gap: "12px",
               }}
             >
-            <p style={{ gridColumn: "1 / -1", margin: 0 }}>
+            <p style={{ gridColumn: "1 / -1", margin: 0, fontSize: "20px", textAlign: "center", backgroundColor: "#eff6ff", padding: "12px", borderRadius: "8px" }}>
               <strong>Project Title:</strong> {projectTitle || "Untitled Project"}
             </p>  
             <p
