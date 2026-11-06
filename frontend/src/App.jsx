@@ -945,6 +945,7 @@ function App() {
                 padding: "20px",
                 marginTop: "20px",
                 backgroundColor: "#f9f9f9",
+                boxShadow: "0 3px 10px rgba(0, 0, 0, 0.08)",
                 color: "#222",
                 transition: "border-color 0.2s ease",
               }}
@@ -978,6 +979,7 @@ function App() {
                       fontWeight: "bold",
                       fontSize: "20px",
                       flexShrink: 0,
+                      boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
                     }}
                   >
                     {index + 1}
