@@ -876,9 +876,16 @@ function App() {
               borderRadius: "8px",
               cursor: "pointer",
               fontSize: "14px",
+              transition: "background-color 0.2s ease",
               marginTop: "10px",
               marginBottom: "10px",
               marginLeft: "10px",
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = "#1d4ed8";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = "#2563eb";
             }}
           >
             Save Storyboard
