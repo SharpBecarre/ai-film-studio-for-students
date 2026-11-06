@@ -851,8 +851,15 @@ function App() {
               borderRadius: "8px",
               cursor: "pointer",
               fontSize: "14px",
+              transition: "background-color 0.2s ease",
               marginTop: "10px",
               marginBottom: "10px",
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = "#fff1f2";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = "#fff";
             }}
           >
             Reset Storyboard
