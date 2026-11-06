@@ -902,9 +902,16 @@ function App() {
               borderRadius: "8px",
               cursor: "pointer",
               fontSize: "14px",
+              transition: "background-color 0.2s ease",
               marginTop: "10px",
               marginBottom: "10px",
               marginLeft: "10px",
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = "#6d28d9";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = "#7c3aed";
             }}
           >
             Export Storyboard
