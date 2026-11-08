@@ -2,3 +2,8 @@
 backend/.env
 __pycache__/
 *.pyc
+
+# Generated media files
+backend/generated_audio/
+backend/generated_videos/
+backend/generated_images/

@@ -5,6 +5,7 @@ import tempfile
 import uuid
 
 from PIL import Image, ImageDraw, ImageFont
+from image_generator import generate_scene_image
 
 
 def create_scene_image(scene, output_path):
@@ -95,7 +96,15 @@ def render_storyboard(scenes, client, output_path):
             audio_path = temp_dir / f"scene_{index}.mp3"
             video_path = temp_dir / f"scene_{index}.mp4"
 
-            create_scene_image(scene, image_path)
+            try:
+                generate_scene_image(
+                    client,
+                    scene.get("visual", ""),
+                    image_path,
+                )
+            except Exception as error:
+                print(f"AI image generation failed for scene {index}: {error}")
+                create_scene_image(scene, image_path)
 
             with client.audio.speech.with_streaming_response.create(
                 model="tts-1",
