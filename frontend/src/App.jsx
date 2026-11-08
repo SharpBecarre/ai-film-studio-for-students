@@ -14,6 +14,8 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState(null);
 
   function estimateNarrationDuration(text) {
     if (!text || !text.trim()) {
@@ -304,6 +306,45 @@ function App() {
     console.error(error);
   } finally {
     setStoryboardLoading(false);
+  }
+}
+
+async function handleGenerateVideo() {
+  if (!storyboard?.scenes?.length) {
+    alert("Please generate or load a storyboard first.");
+    return;
+  }
+
+  setVideoLoading(true);
+  setVideoUrl(null);
+
+  try {
+    const response = await fetch(
+      "http://localhost:8000/generate-video",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scenes: storyboard.scenes,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Video generation failed: ${response.status}`);
+    }
+
+    const videoBlob = await response.blob();
+    const url = URL.createObjectURL(videoBlob);
+
+    setVideoUrl(url);
+  } catch (error) {
+    console.error("Video generation error:", error);
+    alert("Could not generate the video. Please check the backend terminal.");
+  } finally {
+    setVideoLoading(false);
   }
 }
 
@@ -1200,6 +1241,43 @@ function App() {
               </div>
             </div>
           ))}
+        </section>
+      )}
+      {storyboard && (
+        <section style={{ marginTop: "30px", marginBottom: "30px" }}>
+          <h2>Generate Your Video</h2>
+
+          <button
+            onClick={handleGenerateVideo}
+            disabled={videoLoading}
+          >
+            {videoLoading ? "Generating Video..." : "Generate Video"}
+          </button>
+
+          {videoLoading && (
+            <p>Creating scenes and AI narration. Please wait...</p>
+          )}
+
+          {videoUrl && (
+            <div style={{ marginTop: "20px" }}>
+              <h3>Your Generated Video</h3>
+
+              <video
+                src={videoUrl}
+                controls
+                style={{ width: "100%", maxWidth: "800px" }}
+              />
+
+              <div style={{ marginTop: "15px" }}>
+                <a
+                  href={videoUrl}
+                  download="ai_film_studio_video.mp4"
+                >
+                  Download MP4
+                </a>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </main>

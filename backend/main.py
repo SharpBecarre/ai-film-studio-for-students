@@ -3,6 +3,8 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from video_renderer import render_storyboard
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -180,3 +182,69 @@ def generate_storyboard(data: dict):
         "title": script.get("title", "Untitled Video"),
         "scenes": scenes
     }
+    
+@app.post("/generate-narration")
+def generate_narration(data: dict):
+    import uuid
+    from pathlib import Path
+
+    narration_text = data.get("text", "").strip()
+
+    if not narration_text:
+        return {"error": "Narration text is required."}
+
+    output_folder = Path(__file__).parent / "generated_audio"
+    output_folder.mkdir(exist_ok=True)
+
+    output_file = output_folder / f"{uuid.uuid4().hex}.mp3"
+
+    with client.audio.speech.with_streaming_response.create(
+        model="tts-1",
+        voice="alloy",
+        input=narration_text,
+        response_format="mp3",
+    ) as response:
+        response.stream_to_file(output_file)
+
+    return FileResponse(
+        path=output_file,
+        media_type="audio/mpeg",
+        filename="narration.mp3",
+    )
+
+@app.post("/generate-video")
+def generate_video(data: dict):
+    import uuid
+    from pathlib import Path
+    from fastapi import HTTPException
+
+    scenes = data.get("scenes")
+
+    if not isinstance(scenes, list) or not scenes:
+        raise HTTPException(
+            status_code=400,
+            detail="Please provide at least one storyboard scene."
+        )
+
+    if not all(isinstance(scene, dict) for scene in scenes):
+        raise HTTPException(
+            status_code=400,
+            detail="Every storyboard scene must be an object."
+        )
+
+    output_folder = Path(__file__).parent / "generated_videos"
+    output_folder.mkdir(exist_ok=True)
+
+    output_path = output_folder / f"{uuid.uuid4().hex}.mp4"
+
+    try:
+        render_storyboard(scenes, client, output_path)
+    except Exception:
+        output_path.unlink(missing_ok=True)
+        raise
+
+    return FileResponse(
+        path=output_path,
+        media_type="video/mp4",
+        filename="ai_film_studio_video.mp4",
+    )
