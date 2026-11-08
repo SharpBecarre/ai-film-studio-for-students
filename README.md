@@ -1,31 +1,68 @@
+
 # AI Film Studio for Students
 
-AI Film Studio for Students is a web application that helps students turn any educational topic into a short video.
+AI Film Studio for Students is a full-stack web application
+that helps students transform educational topics into
+short, narrated videos using artificial intelligence.
 
-The app will use AI to generate:
+## Project Overview
 
-- a short educational script
-- a storyboard
-- narration / voice-over
-- visuals for each scene
-- captions
-- a final exportable video
+The application combines AI-generated educational scripts,
+editable storyboards, text-based scene visuals, AI narration,
+and automated video assembly.
+
+Students can create and download an MP4 video directly
+from the website.
+
+## Current Features
+
+- Generate educational scripts from a topic
+- Select an audience, video length, and presentation style
+- Generate a structured storyboard
+- Edit storyboard scenes and narration
+- Save, load, import, and export storyboards
+- Generate AI narration for each scene
+- Create text-based visuals for storyboard scenes
+- Combine scenes and narration into an MP4 video
+- Preview the completed video in the browser
+- Download the finished MP4
 
 ## Project Goal
 
-The goal of this project is to build a full-stack AI application that combines software engineering, artificial intelligence, education, and media production.
+My goal is to combine my interests in filmmaking,
+storytelling, education, and software engineering
+by building a practical AI-powered creative tool.
 
 ## Why This Project Matters
 
-Many students understand topics better when they see them explained visually. This tool will help students quickly create educational videos for studying, presentations, and class projects.
+Creating educational videos normally requires writing,
+storyboarding, recording narration, editing, and exporting.
 
-## Planned Technology Stack
+AI Film Studio brings these steps together in one application,
+helping students experiment with educational storytelling
+and video production.
 
-- React for the frontend
-- Python and FastAPI for the backend
-- OpenAI API for script generation and AI features
-- FFmpeg or MoviePy for video assembly
-- GitHub for version control
+## Technology Stack
+
+### Frontend
+- React
+- JavaScript
+- Vite
+
+### Backend
+- Python
+- FastAPI
+- OpenAI API
+
+### Video Production
+- OpenAI text-to-speech
+- Pillow for scene images
+- FFmpeg for video rendering and assembly
+
+### Development
+- Visual Studio Code
+- Git and GitHub
+- Windows Subsystem for Linux (WSL)
 
 ## 10-Week Roadmap
 
@@ -102,20 +139,6 @@ During Week 1, I built the foundation for AI Film Studio for Students.
 - How Git and GitHub track project progress
 - How to troubleshoot folder, terminal, and virtual environment issues
 
-### Current working demo
-
-A user can type an educational topic into the React web app.
-
-The frontend sends that topic to the FastAPI backend.
-
-The backend returns a simple video plan.
-
-The frontend displays the video plan on the page.
-
-Example topic:
-
-```text
-How volcanoes erupt
 
 ## Week 2 — AI Script Generator (Days 8–14)
 
@@ -155,3 +178,106 @@ I also learned that AI-generated content needs testing for accuracy, consistency
 ### Next Steps
 
 During Week 3, I plan to build a storyboard generator that turns the AI script into a sequence of scenes for video production.
+
+### Current working demo
+
+A user can type an educational topic into the React web app.
+
+The frontend sends that topic to the FastAPI backend.
+
+The backend returns a simple video plan.
+
+The frontend displays the video plan on the page.
+
+Example topic:
+
+```text
+How volcanoes erupt
+```
+
+
+## Running the Application Locally
+
+### Requirements
+
+Install the following software:
+
+- Python 3
+- Node.js and npm
+- FFmpeg
+- Git
+
+An OpenAI API key with access to text generation and
+text-to-speech is also required.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/SharpBecarre/ai-film-studio-for-students.git
+cd ai-film-studio-for-students
+```
+
+
+### 2. Set Up the Backend
+
+From the project root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn python-dotenv openai pillow
+```
+
+Create a file named `.env` in the `backend` directory:
+
+```text
+OPENAI_API_KEY=your_api_key_here
+```
+
+Never commit this file or share your API key.
+
+### 3. Start the Backend
+
+From the project root, with the virtual environment active:
+
+```bash
+uvicorn main:app --app-dir backend --reload
+```
+
+The API will be available at:
+
+http://localhost:8000
+
+### 4. Start the Frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the local address displayed by Vite, usually:
+
+http://localhost:5173
+
+### 5. Create a Video
+
+1. Enter an educational topic.
+2. Choose the audience, length, and presentation style.
+3. Generate an AI script.
+4. Generate a storyboard.
+5. Edit the storyboard if needed.
+6. Click Generate Video.
+7. Preview the completed video.
+8. Download the MP4.
+
+### Notes
+
+- The application currently runs locally.
+- Video generation requires an internet connection and
+  uses OpenAI API credits.
+- Current scene visuals are text-based slides.
+- AI-generated cinematic imagery and synchronized captions
+  are potential future improvements.
