@@ -1,7 +1,7 @@
 import os
 import json
 from dotenv import load_dotenv
-from openai import OpenAI 
+from openai import OpenAI
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from video_renderer import render_storyboard
@@ -75,7 +75,7 @@ Target video length: approximately {video_length} seconds
 Style: {style}
 
 Adjust the vocabulary, explanations, and level of detail for the target audience.
-Adjust the amount of narration so the complete video is appropriate for the requested video length.
+Keep each narrated segment short enough for approximately five seconds of video.
 Write the narration in the requested style.
 
 Return ONLY valid JSON.
@@ -120,7 +120,7 @@ Use exactly this structure:
 Create exactly 3 scenes.
 
 Keep the narration clear, engaging, and accurate.
-Make the complete narration appropriate for approximately {video_length} seconds.
+Create exactly five narrated segments: introduction, three main scenes, and conclusion. Each segment must contain approximately 8 to 10 spoken words, aiming for no more than five seconds of narration at normal speaking speed. Prioritize this five-second limit over the requested total video length.
 Make the vocabulary and explanation level appropriate for: {audience}.
 Use this presentation style: {style}.
 """
@@ -182,7 +182,7 @@ def generate_storyboard(data: dict):
         "title": script.get("title", "Untitled Video"),
         "scenes": scenes
     }
-    
+
 @app.post("/generate-narration")
 def generate_narration(data: dict):
     import uuid
