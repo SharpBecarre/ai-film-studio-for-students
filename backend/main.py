@@ -104,22 +104,28 @@ def create_video_plan(data: dict):
 @app.post("/generate-script")
 def generate_script(data: dict):
     topic = data.get("topic", "").strip()
+    project_title = str(data.get("project_title") or "").strip()
     audience = data.get("audience", "High School")
     video_length = data.get("video_length", "60")
+    narration_speed = data.get("narration_speed", "150")
     style = data.get("style", "Educational")
 
     if not topic:
         return {"error": "Please provide a topic."}
 
     prompt = f"""
-Create a short educational video script about: {topic}
+Create a video script about: {topic}
+
+The project title is: {project_title or topic}
+Use this exact title in the JSON "title" field.
+Do not invent, rewrite, shorten, or replace the project title.
 
 Target audience: {audience}
 Target video length: approximately {video_length} seconds
 Style: {style}
 
+
 Adjust the vocabulary, explanations, and level of detail for the target audience.
-Keep each narrated segment short enough for approximately five seconds of video.
 Write the narration in the requested style.
 
 Return ONLY valid JSON.
@@ -163,8 +169,28 @@ Use exactly this structure:
 
 Create exactly 3 scenes.
 
+
 Keep the narration clear, engaging, and accurate.
-Create exactly five narrated segments: introduction, three main scenes, and conclusion. Each segment must contain approximately 8 to 10 spoken words, aiming for no more than five seconds of narration at normal speaking speed. Prioritize this five-second limit over the requested total video length.
+
+The requested total video length is {video_length} seconds.
+
+The selected narration speed is {narration_speed} spoken words per minute.
+
+Calculate the target narration word count as:
+(video length in seconds / 60) * {narration_speed}.
+
+Create exactly five narrated segments:
+one introduction, three main scenes, and one conclusion.
+
+Distribute the total narration word count across all five segments.
+
+Aim for approximately 95% to 100% of the calculated target word count
+across all five narrated segments.
+Distribute the narration naturally rather than forcing equal-length segments.
+
+For other video lengths, scale the narration word count proportionally.
+Count only spoken narration, not titles or visual descriptions.
+Do not shorten the narration to five seconds per segment.
 Make the vocabulary and explanation level appropriate for: {audience}.
 Use this presentation style: {style}.
 """

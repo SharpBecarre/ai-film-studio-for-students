@@ -15,11 +15,21 @@ def generate_scene_image(client, visual_prompt, output_path):
 
     result = client.images.generate(
         model="gpt-image-1-mini",
+
         prompt=(
-            "Create a cinematic, visually engaging image for "
-            "an educational short film. "
-            "Use a widescreen composition. "
-            "Do not include captions, text, or watermarks. "
+            "Create a photorealistic, cinematic film still suitable "
+            "for an animated documentary scene. "
+            "Use a widescreen cinematic composition. "
+            "The image must contain absolutely no readable text, "
+            "letters, numbers, titles, subtitles, logos, labels, "
+            "signage, credits, or watermarks. "
+            "Do not create title cards, opening credits, posters, "
+            "or text overlays. "
+            "If the scene description mentions text appearing on "
+            "screen, represent the underlying visual concept "
+            "without displaying any written words. "
+            "Prioritize natural cinematic imagery, realistic lighting, "
+            "and visually coherent subjects. "
             f"Scene description: {prompt}"
         ),
         size="1536x1024",

@@ -88,10 +88,13 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           topic: topic,
+          project_title: projectTitle,
           audience: audience,
           video_length: videoLength,
+          narration_speed: narrationSpeed,
           style: style,
         }),
       });
