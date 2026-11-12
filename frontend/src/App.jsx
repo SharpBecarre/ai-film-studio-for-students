@@ -15,6 +15,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [generatingImageScene, setGeneratingImageScene] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
 
   function estimateNarrationDuration(text) {
@@ -121,11 +122,71 @@ function App() {
         ...previousStoryboard,
         scenes: previousStoryboard.scenes.map((scene) =>
           scene.scene_number === sceneNumber
-            ? { ...scene, [field]: newValue }
+            ? {
+                ...scene,
+                [field]: newValue,
+                ...(field === "visual" ? { image_id: null, image_url: null } : {}),
+              }
             : scene
         ),
       };
     });
+  }
+
+  async function handleGenerateSceneImage(sceneNumber, visual) {
+    if (!visual?.trim()) {
+      alert("Please enter a visual description first.");
+      return;
+    }
+
+    if (generatingImageScene !== null) {
+      return;
+    }
+
+    setGeneratingImageScene(sceneNumber);
+
+    try {
+      const response = await fetch(
+        "http://localhost:8000/generate-storyboard-image",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visual }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Image generation failed.");
+      }
+
+      const data = await response.json();
+
+      if (!data.image_id || !data.image_url) {
+        throw new Error("The backend did not return an image.");
+      }
+
+      setStoryboard((previous) => {
+        if (!previous) return previous;
+
+        return {
+          ...previous,
+          scenes: previous.scenes.map((scene) =>
+            scene.scene_number === sceneNumber && scene.visual === visual
+              ? {
+                  ...scene,
+                  image_id: data.image_id,
+                  image_url: data.image_url,
+                }
+              : scene
+          ),
+        };
+      });
+    } catch (error) {
+      console.error("Storyboard image generation failed:", error);
+      alert("Could not generate the image. Please try again.");
+    } finally {
+      setGeneratingImageScene(null);
+    }
   }
 
   function handleResetStoryboard() {
@@ -1117,16 +1178,42 @@ async function handleGenerateVideo() {
                       boxSizing: "border-box",
                     }}
                   >
-                    <span
-                      style={{
-                        color: "#526b89",
-                        fontSize: "14px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Image will appear here
-                    </span>
+                    {scene.image_id ? (
+                      <img
+                        src={`http://localhost:8000/storyboard-images/${scene.image_id}`}
+                        alt={`Storyboard image for ${scene.title}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          color: "#526b89",
+                          fontSize: "14px",
+                          textAlign: "center",
+                        }}
+                      >
+                        Image will appear here
+                      </span>
+                    )}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleGenerateSceneImage(scene.scene_number, scene.visual)
+                    }
+                    disabled={generatingImageScene !== null}
+                  >
+                    {generatingImageScene === scene.scene_number
+                      ? "Generating Image..."
+                      : scene.image_id
+                        ? "Regenerate Image"
+                        : "Generate Image"}
+                  </button>
 
                   <textarea
                     aria-label={`Visual description for ${scene.title}`}

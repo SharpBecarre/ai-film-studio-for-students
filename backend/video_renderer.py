@@ -232,7 +232,38 @@ def render_storyboard(scenes, client, output_path):
                 except Exception:
                     image_path.unlink(missing_ok=True)
 
-            if not image_path.is_file():
+            saved_image_id = scene.get("image_id")
+
+            if saved_image_id:
+                import re
+                import shutil
+
+                if not isinstance(saved_image_id, str) or not re.fullmatch(
+                    r"[0-9a-f]{32}\\.png", saved_image_id
+                ):
+                    raise ValueError(f"Invalid storyboard image ID for scene {index + 1}.")
+
+                saved_image_path = (
+                    Path(__file__).parent
+                    / "generated_storyboard_images"
+                    / saved_image_id
+                )
+
+                if not saved_image_path.is_file():
+                    raise FileNotFoundError(
+                        f"Storyboard image missing for scene {index + 1}: {saved_image_id}"
+                    )
+
+                with Image.open(saved_image_path) as saved_image:
+                    saved_image.verify()
+
+                shutil.copyfile(saved_image_path, image_path)
+                print(
+                    f"Using saved storyboard image for scene {index + 1}",
+                    flush=True,
+                )
+
+            elif not image_path.is_file():
                 try:
                     generate_scene_image(
                         client,

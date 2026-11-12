@@ -5,6 +5,7 @@ from openai import OpenAI
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from video_renderer import render_storyboard
+from image_generator import generate_scene_image
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -29,6 +30,49 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+@app.post("/generate-storyboard-image")
+def generate_storyboard_image(data: dict):
+    import uuid
+    from pathlib import Path
+    from fastapi import HTTPException
+
+    visual = str(data.get("visual") or "").strip()
+    if not visual:
+        raise HTTPException(status_code=400, detail="A visual description is required.")
+
+    image_id = f"{uuid.uuid4().hex}.png"
+    image_folder = Path(__file__).parent / "generated_storyboard_images"
+    image_path = image_folder / image_id
+
+    try:
+        generate_scene_image(client, visual, image_path)
+    except Exception:
+        image_path.unlink(missing_ok=True)
+        raise
+
+    return {
+        "image_id": image_id,
+        "image_url": f"/storyboard-images/{image_id}",
+    }
+
+
+@app.get("/storyboard-images/{image_id}")
+def get_storyboard_image(image_id: str):
+    from pathlib import Path
+    from fastapi import HTTPException
+
+    if not image_id.endswith(".png") or len(image_id) != 36:
+        raise HTTPException(status_code=400, detail="Invalid image ID.")
+
+    image_path = Path(__file__).parent / "generated_storyboard_images" / image_id
+
+    if not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    return FileResponse(image_path, media_type="image/png")
 
 
 @app.get("/")
