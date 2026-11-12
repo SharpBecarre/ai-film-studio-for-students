@@ -239,7 +239,7 @@ def render_storyboard(scenes, client, output_path):
                 import shutil
 
                 if not isinstance(saved_image_id, str) or not re.fullmatch(
-                    r"[0-9a-f]{32}\\.png", saved_image_id
+                    r"[0-9a-f]{32}\.png", saved_image_id
                 ):
                     raise ValueError(f"Invalid storyboard image ID for scene {index + 1}.")
 
