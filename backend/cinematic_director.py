@@ -123,3 +123,233 @@ def select_motion_prompt(scene):
         return title.strip()[:900]
 
     return "A cinematic scene with subtle natural movement."
+
+
+def build_image_aware_cinematic_prompt(scene):
+    """Build instructions for planning motion from an actual image."""
+    narration = str(scene.get("narration") or "")
+    visual = str(scene.get("visual") or "")
+    title = str(scene.get("title") or "")
+
+    return f"""
+You are a cinematic director planning a 5-second
+image-to-video animation.
+
+You will receive an actual storyboard image together
+with the following scene information.
+
+Scene title: {title}
+Narration: {narration}
+Original visual description: {visual}
+
+IMPORTANT:
+- Treat the supplied image as the visual source of truth.
+- Identify only subjects and objects visible in the image.
+- Do not invent objects or change their identities.
+- If the written description differs from the image,
+  follow the image for visual details.
+- Preserve the existing composition and setting.
+- Choose subtle, realistic subject movement.
+- Choose one smooth, achievable camera movement.
+- Keep all movement suitable for a 5-second shot.
+- Do not introduce cuts, montages, or transitions.
+- Do not add text, logos, captions, or watermarks.
+- Preserve the factual meaning of the narration.
+
+Return ONLY valid JSON with these fields:
+{{
+  "shot_description": "...",
+  "subject_action": "...",
+  "camera_movement": "...",
+  "motion_prompt": "..."
+}}
+
+The motion_prompt must be suitable for Runway
+image-to-video generation and must not exceed
+900 characters.
+""".strip()
+
+
+def encode_storyboard_image(image_path):
+    """Encode an existing storyboard image for AI vision input."""
+    import base64
+    import mimetypes
+    from pathlib import Path
+
+    path = Path(image_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Storyboard image not found: {path}"
+        )
+
+    mime_type, _ = mimetypes.guess_type(path.name)
+
+    if mime_type not in ("image/png", "image/jpeg", "image/webp"):
+        raise ValueError("Unsupported storyboard image format.")
+
+    image_bytes = path.read_bytes()
+
+    if not image_bytes:
+        raise ValueError("Storyboard image is empty.")
+
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def build_image_aware_input(scene, image_path):
+    """Prepare a multimodal cinematic planning request."""
+    prompt = build_image_aware_cinematic_prompt(scene)
+    image_url = encode_storyboard_image(image_path)
+
+    return [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": prompt,
+                },
+                {
+                    "type": "input_image",
+                    "image_url": image_url,
+                },
+            ],
+        }
+    ]
+
+
+def generate_image_aware_cinematic_plan(scene, image_path, client):
+    """Generate a cinematic plan using the actual storyboard image."""
+    request_input = build_image_aware_input(scene, image_path)
+
+    response = client.responses.create(
+        model="gpt-6-luna",
+        input=request_input,
+    )
+
+    try:
+        plan = json.loads(response.output_text)
+    except (json.JSONDecodeError, TypeError) as error:
+        raise ValueError(
+            "AI returned invalid image-aware cinematic plan JSON."
+        ) from error
+
+    return validate_cinematic_plan(plan)
+
+
+def cinematic_plan_path(scene_folder, scene_index):
+    """Return a separate path for a scene's cinematic plan."""
+    from pathlib import Path
+
+    if not isinstance(scene_index, int) or isinstance(scene_index, bool):
+        raise ValueError("Scene index must be an integer.")
+
+    if scene_index < 0:
+        raise ValueError("Scene index cannot be negative.")
+
+    return Path(scene_folder) / f"cinematic_plan_{scene_index}.json"
+
+
+def save_cinematic_plan(scene_folder, scene_index, plan, image_path):
+    """Save a cinematic plan linked to its source image."""
+    import os
+    import tempfile
+
+    validated = validate_cinematic_plan(plan)
+    image_hash = storyboard_image_fingerprint(image_path)
+
+    path = cinematic_plan_path(scene_folder, scene_index)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    record = {
+        "image_fingerprint": image_hash,
+        "plan": validated,
+    }
+
+    temporary_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=".cinematic_plan_",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = temporary_file.name
+            json.dump(
+                record,
+                temporary_file,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+        os.replace(temporary_path, path)
+
+    finally:
+        if temporary_path and os.path.exists(temporary_path):
+            os.unlink(temporary_path)
+
+    return path
+
+
+def load_cinematic_plan(scene_folder, scene_index, image_path):
+    """Load a cinematic plan only if its source image matches."""
+    path = cinematic_plan_path(scene_folder, scene_index)
+
+    if not path.is_file():
+        return None
+
+    record = json.loads(path.read_text(encoding="utf-8"))
+
+    if not isinstance(record, dict):
+        raise ValueError("Invalid cinematic plan record.")
+
+    saved_hash = record.get("image_fingerprint")
+    current_hash = storyboard_image_fingerprint(image_path)
+
+    if not isinstance(saved_hash, str) or saved_hash != current_hash:
+        raise ValueError(
+            "Cinematic plan image fingerprint mismatch. "
+            "The saved plan cannot be used with this image."
+        )
+
+    return validate_cinematic_plan(record.get("plan"))
+
+def select_saved_motion_prompt(scene, scene_folder, scene_index, image_path):
+    """Select a saved motion prompt only for its matching image."""
+    saved_plan = load_cinematic_plan(
+        scene_folder,
+        scene_index,
+        image_path,
+    )
+
+    if saved_plan is not None:
+        return saved_plan["motion_prompt"].strip()
+
+    return select_motion_prompt(scene)
+
+
+def storyboard_image_fingerprint(image_path):
+    """Calculate a SHA-256 fingerprint of a storyboard image."""
+    import hashlib
+    from pathlib import Path
+
+    path = Path(image_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Storyboard image not found: {path}"
+        )
+
+    digest = hashlib.sha256()
+
+    with path.open("rb") as image_file:
+        for chunk in iter(lambda: image_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
+

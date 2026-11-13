@@ -9,7 +9,7 @@ import uuid
 
 from PIL import Image, ImageDraw, ImageFont
 from image_generator import generate_scene_image
-from cinematic_director import select_motion_prompt
+from cinematic_director import select_saved_motion_prompt
 from runway_video_generator import generate_moving_scene
 from animation_review import load_review
 
@@ -512,7 +512,7 @@ def render_storyboard(scenes, client, output_path):
                         generate_moving_scene(
                             image_path,
                             moving_path,
-                            select_motion_prompt(scene),
+                            select_saved_motion_prompt(scene, temp_dir, index, image_path),
                         )
                     except Exception as error:
                         print(
