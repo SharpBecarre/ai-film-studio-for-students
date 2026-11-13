@@ -14,6 +14,7 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
+  const [cinematicPlanning, setCinematicPlanning] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
   const [generatingImageScene, setGeneratingImageScene] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
@@ -352,6 +353,7 @@ function App() {
         },
         body: JSON.stringify({
           script: script,
+          cinematic_planning: cinematicPlanning,
         }),
       }
     );
@@ -779,6 +781,16 @@ async function handleGenerateVideo() {
             <strong>Visual:</strong> {script.conclusion.visual}
           </p>
           </div>
+
+          <label style={{ display: "block", marginTop: "20px" }}>
+            <input
+              type="checkbox"
+              checked={cinematicPlanning}
+              onChange={(event) => setCinematicPlanning(event.target.checked)}
+              disabled={storyboardLoading}
+            />
+            {" "}Enable AI Cinematic Planning (uses OpenAI API credits)
+          </label>
 
           <button
           type="button"

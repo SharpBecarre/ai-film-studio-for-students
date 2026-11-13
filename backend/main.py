@@ -248,6 +248,14 @@ def generate_storyboard(data: dict):
         "visual": conclusion.get("visual", "")
     })
 
+    if data.get("cinematic_planning") is True:
+        from cinematic_director import generate_cinematic_plan
+
+        for scene in scenes:
+            scene["cinematic_plan"] = generate_cinematic_plan(
+                scene, client
+            )
+
     return {
         "title": script.get("title", "Untitled Video"),
         "scenes": scenes
