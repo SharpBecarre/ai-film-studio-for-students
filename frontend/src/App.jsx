@@ -95,9 +95,19 @@ const [originalStoryboard, setOriginalStoryboard] = useState(
   const [adaptiveApprovalError, setAdaptiveApprovalError] =
     useState("");
 
+  // Runway request preview only — no video generation.
+  const [adaptiveRunwayPreview, setAdaptiveRunwayPreview] =
+    useState(null);
+  const [adaptivePreviewLoading, setAdaptivePreviewLoading] =
+    useState(null);
+  const [adaptivePreviewError, setAdaptivePreviewError] =
+    useState("");
+
   // References for checking asynchronous approval responses.
   const adaptivePlanRef = useRef(adaptiveShotPlan);
   const adaptiveApprovalRequestRef = useRef(0);
+  // Prevent outdated Runway previews from appearing after edits.
+  const adaptivePreviewRequestRef = useRef(0);
 
 
 
@@ -106,9 +116,13 @@ const [originalStoryboard, setOriginalStoryboard] = useState(
   useEffect(() => {
     adaptivePlanRef.current = adaptiveShotPlan;
     adaptiveApprovalRequestRef.current += 1;
+    adaptivePreviewRequestRef.current += 1;
     setAdaptivePromptApprovals({});
     setAdaptiveApprovalLoading(null);
     setAdaptiveApprovalError("");
+    setAdaptiveRunwayPreview(null);
+    setAdaptivePreviewLoading(null);
+    setAdaptivePreviewError("");
   }, [adaptiveShotPlan]);
 
   const [videoLoading, setVideoLoading] = useState(false);
@@ -781,6 +795,11 @@ function handleAdaptivePromptChange(clipNumber, newPrompt) {
 
   // Invalidate pending approvals immediately on an edit.
   adaptiveApprovalRequestRef.current += 1;
+  // Invalidate previews when a motion prompt changes.
+  adaptivePreviewRequestRef.current += 1;
+  setAdaptiveRunwayPreview(null);
+  setAdaptivePreviewLoading(null);
+  setAdaptivePreviewError("");
   setAdaptivePromptApprovals({});
   setAdaptiveApprovalLoading(null);
   setAdaptiveApprovalError("");
@@ -817,6 +836,116 @@ function handleAdaptivePromptChange(clipNumber, newPrompt) {
       },
     };
   });
+}
+
+async function handlePreviewAdaptiveRunway(clipNumber) {
+  const current = adaptivePlanRef.current;
+  const plan = current?.shot_plan;
+  const approved = adaptivePromptApprovals[clipNumber];
+
+  if (!plan?.clips || !Number.isInteger(clipNumber)) {
+    setAdaptivePreviewError("No valid shot plan is selected.");
+    return;
+  }
+
+  const clip = plan.clips.find(
+    (item) => item.clip_number === clipNumber
+  );
+
+  if (
+    !clip ||
+    clip.prompt_locked ||
+    !approved?.record ||
+    approved.plan !== plan ||
+    approved.prompt !== clip.motion_prompt
+  ) {
+    setAdaptivePreviewError(
+      "Approve the current motion prompt before previewing."
+    );
+    return;
+  }
+
+  if (adaptivePreviewLoading !== null) {
+    return;
+  }
+
+  const requestVersion = ++adaptivePreviewRequestRef.current;
+  const submittedPlan = structuredClone(plan);
+  const submittedPrompt = clip.motion_prompt;
+
+  setAdaptiveRunwayPreview(null);
+  setAdaptivePreviewLoading(clipNumber);
+  setAdaptivePreviewError("");
+
+  try {
+    const response = await fetch(
+      "http://localhost:8000/preview-adaptive-runway",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scene_number: plan.scene_number,
+          strategy: plan.strategy,
+          clip_number: clipNumber,
+          shot_plan: submittedPlan,
+          approval: approved.record,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (requestVersion !== adaptivePreviewRequestRef.current) {
+      return;
+    }
+
+    const latestPlan = adaptivePlanRef.current?.shot_plan;
+    const latestClip = latestPlan?.clips?.find(
+      (item) => item.clip_number === clipNumber
+    );
+
+    if (
+      latestPlan !== plan ||
+      !latestClip ||
+      latestClip.prompt_locked ||
+      latestClip.motion_prompt !== submittedPrompt
+    ) {
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        typeof result.detail === "string"
+          ? result.detail
+          : "Runway preview failed."
+      );
+    }
+
+    if (
+      result.preview_only !== true ||
+      result.generation_submitted !== false ||
+      result.provider !== "runway" ||
+      result.clip_number !== clipNumber ||
+      result.scene_number !== plan.scene_number ||
+      result.motion_prompt !== submittedPrompt
+    ) {
+      throw new Error("Invalid Runway preview response.");
+    }
+
+    setAdaptiveRunwayPreview(result);
+  } catch (error) {
+    if (requestVersion === adaptivePreviewRequestRef.current) {
+      setAdaptivePreviewError(
+        error instanceof Error
+          ? error.message
+          : "Could not preview Runway request."
+      );
+    }
+  } finally {
+    if (requestVersion === adaptivePreviewRequestRef.current) {
+      setAdaptivePreviewLoading(null);
+    }
+  }
 }
 
 async function handlePrepareAdaptiveShots() {
@@ -2272,6 +2401,86 @@ async function handleGenerateVideo() {
                           No video generated.
                         </p>
                       )}
+                    {adaptivePromptApprovals[clip.clip_number]?.plan ===
+                      adaptiveShotPlan.shot_plan &&
+                      adaptivePromptApprovals[clip.clip_number]?.prompt ===
+                        clip.motion_prompt && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handlePreviewAdaptiveRunway(clip.clip_number)
+                          }
+                          disabled={
+                            adaptivePreviewLoading !== null ||
+                            adaptiveApprovalLoading !== null ||
+                            adaptiveLoading
+                          }
+                          style={{ marginTop: "8px", marginLeft: "8px" }}
+                        >
+                          {adaptivePreviewLoading === clip.clip_number
+                            ? "Preparing Preview..."
+                            : "Preview Runway Request"}
+                        </button>
+                      )}
+                    {adaptiveRunwayPreview?.scene_number ===
+                      adaptiveShotPlan.shot_plan.scene_number &&
+                      adaptiveRunwayPreview?.clip_number ===
+                        clip.clip_number &&
+                      adaptiveRunwayPreview?.motion_prompt ===
+                        clip.motion_prompt && (
+                        <div
+                          role="status"
+                          style={{
+                            marginTop: "12px",
+                            padding: "12px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            backgroundColor: "#f8fafc",
+                            fontSize: "13px",
+                          }}
+                        >
+                          <strong>Verified Runway Request Preview</strong>
+
+                          <p>Model: {adaptiveRunwayPreview.model}</p>
+                          <p>
+                            Duration: {adaptiveRunwayPreview.duration_seconds} seconds
+                          </p>
+                          <p>Resolution: {adaptiveRunwayPreview.ratio}</p>
+                          <p>Scene: {adaptiveRunwayPreview.scene_number}</p>
+                          <p>Clip: {adaptiveRunwayPreview.clip_number}</p>
+
+                          <p>
+                            <strong>Motion prompt:</strong>
+                          </p>
+                          <p style={{ whiteSpace: "pre-wrap" }}>
+                            {adaptiveRunwayPreview.motion_prompt}
+                          </p>
+
+                          <p>
+                            <strong>Image SHA-256:</strong>{" "}
+                            <code style={{ overflowWrap: "anywhere" }}>
+                              {adaptiveRunwayPreview.image_sha256}
+                            </code>
+                          </p>
+
+                          <p>
+                            <strong>Prompt SHA-256:</strong>{" "}
+                            <code style={{ overflowWrap: "anywhere" }}>
+                              {adaptiveRunwayPreview.prompt_sha256}
+                            </code>
+                          </p>
+
+                          <p style={{ color: "#166534", fontWeight: "bold" }}>
+                            Preview only — no video generated or submitted.
+                          </p>
+                        </div>
+                      )}
+
+                    {adaptivePreviewError && (
+                      <p role="alert" style={{ color: "#b91c1c" }}>
+                        {adaptivePreviewError}
+                      </p>
+                    )}
 
                     {adaptiveApprovalError && (
                       <p
