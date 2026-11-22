@@ -290,6 +290,166 @@ def generate_narration(data: dict):
         filename="narration.mp3",
     )
 
+
+
+
+@app.post("/existing-cinematic-assets")
+def existing_cinematic_assets(data: dict):
+    """Inspect saved Ocean City cinematic assets without changes."""
+    from pathlib import Path
+    from fastapi import HTTPException
+    from adaptive_narration_durations import (
+        inspect_saved_narration,
+    )
+    from adaptive_existing_assets import (
+        inspect_existing_scene_assets,
+    )
+
+    scenes = data.get("scenes")
+    scene_number = data.get("scene_number")
+
+    if not isinstance(scenes, list) or not scenes:
+        raise HTTPException(
+            status_code=400,
+            detail="A nonempty storyboard scene list is required.",
+        )
+
+    if (
+        type(scene_number) is not int
+        or scene_number < 1
+        or scene_number > len(scenes)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid scene number.",
+        )
+
+    project_folder = (
+        Path(__file__).resolve().parent
+        / "generated_videos"
+        / "ocean_city_cinematic"
+    )
+
+    try:
+        narration = inspect_saved_narration(
+            project_folder,
+            scenes,
+        )
+
+        assets = inspect_existing_scene_assets(
+            project_folder,
+            scene_number,
+        )
+
+        return {
+            "storyboard_fingerprint": (
+                narration["storyboard_fingerprint"]
+            ),
+            "scene_number": scene_number,
+            **assets,
+            "read_only": True,
+        }
+
+    except (
+        ValueError,
+        FileNotFoundError,
+        OSError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post("/saved-narration-durations")
+def saved_narration_durations(data: dict):
+    """Inspect existing Ocean City narration without generation."""
+    from pathlib import Path
+    from fastapi import HTTPException
+    from adaptive_narration_durations import (
+        inspect_saved_narration,
+    )
+
+    scenes = data.get("scenes")
+
+    if not isinstance(scenes, list):
+        raise HTTPException(
+            status_code=400,
+            detail="Storyboard scenes must be a list.",
+        )
+
+    project_folder = (
+        Path(__file__).resolve().parent
+        / "generated_videos"
+        / "ocean_city_cinematic"
+    )
+
+    try:
+        return inspect_saved_narration(
+            project_folder,
+            scenes,
+        )
+    except (
+        ValueError,
+        FileNotFoundError,
+        OSError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post("/prepare-adaptive-shots")
+def prepare_adaptive_shots(data: dict):
+    """Prepare cinematic shots without AI or video generation."""
+    from fastapi import HTTPException
+    from adaptive_planning_api import (
+        prepare_adaptive_planning_response,
+    )
+
+    try:
+        return prepare_adaptive_planning_response(data)
+    except (ValueError, TypeError) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post("/approve-adaptive-motion-prompt")
+def approve_adaptive_motion_prompt(data: dict):
+    """Approve one verified motion prompt without generating media."""
+    from fastapi import HTTPException
+    from adaptive_prompt_approval_service import (
+        approve_verified_motion_prompt,
+    )
+
+    try:
+        return approve_verified_motion_prompt(
+            scene_number=data.get("scene_number"),
+            strategy=data.get("strategy"),
+            clip_number=data.get("clip_number"),
+            submitted_plan=data.get("shot_plan"),
+            confirmed=data.get("confirmed", False),
+        )
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=403,
+            detail=str(error),
+        ) from error
+    except (
+        ValueError,
+        TypeError,
+        FileNotFoundError,
+        OSError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
 @app.post("/generate-video")
 def generate_video(data: dict):
     import uuid

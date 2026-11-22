@@ -1,23 +1,181 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  saveAdaptiveDraft,
+  readAdaptiveDraft,
+} from "./adaptiveDraftStorage.js";
+
+import {
+  restoreVerifiedAdaptiveDraft,
+} from "./adaptiveDraftRestore.js";
+
+import {
+  migrateLegacyAdaptiveDraft,
+} from "./adaptiveDraftMigration.js";
+
+import {
+  saveAdaptiveDraftToCollection,
+  findAdaptiveDraftInCollection,
+} from "./adaptiveDraftCollection.js";
+
+
+function readAutosave() {
+  try {
+    const raw = localStorage.getItem("ai-film-studio-autosave");
+    if (!raw) return null;
+
+    const saved = JSON.parse(raw);
+
+    if (
+      !saved ||
+      !saved.storyboard ||
+      !Array.isArray(saved.storyboard.scenes) ||
+      saved.storyboard.scenes.length === 0
+    ) {
+      return null;
+    }
+
+    return saved;
+  } catch (error) {
+    console.error("Could not read autosave:", error);
+    return null;
+  }
+}
+
 
 function App() {
-  const [topic, setTopic] = useState("");
-  const [projectTitle, setProjectTitle] = useState("");
-  const [audience, setAudience] = useState("High School");
-  const [videoLength, setVideoLength] = useState("60");
-  const [narrationSpeed, setNarrationSpeed] = useState("150");
-  const [style, setStyle] = useState("Educational");
+  const [initialAutosave] = useState(readAutosave);
+const [topic, setTopic] = useState(
+  initialAutosave?.topic || ""
+);
+const [projectTitle, setProjectTitle] = useState(
+  initialAutosave?.projectTitle || ""
+);
+const [audience, setAudience] = useState(
+  initialAutosave?.audience || "High School"
+);
+const [videoLength, setVideoLength] = useState(
+  String(initialAutosave?.videoLength || "60")
+);
+const [narrationSpeed, setNarrationSpeed] = useState(
+  String(initialAutosave?.narrationSpeed || "150")
+);
+const [style, setStyle] = useState(
+  initialAutosave?.style || "Educational"
+);
 
-  const [script, setScript] = useState("");
-  const [storyboard, setStoryboard] = useState(null);
-  const [originalStoryboard, setOriginalStoryboard] = useState(null);
+const [script, setScript] = useState(
+  initialAutosave?.script || ""
+);
+const [storyboard, setStoryboard] = useState(
+  initialAutosave?.storyboard || null
+);
+const [originalStoryboard, setOriginalStoryboard] = useState(
+  initialAutosave?.storyboard || null
+);
 
   const [loading, setLoading] = useState(false);
   const [storyboardLoading, setStoryboardLoading] = useState(false);
   const [cinematicPlanning, setCinematicPlanning] = useState(false);
+
+  // Optional adaptive cinematic shot planning.
+  // This state does not affect the original video-generation workflow.
+  const [adaptiveSceneNumber, setAdaptiveSceneNumber] = useState(1);
+  const [adaptiveStrategy, setAdaptiveStrategy] = useState("balanced");
+  const [adaptiveDurations, setAdaptiveDurations] = useState(null);
+  const [adaptiveShotPlan, setAdaptiveShotPlan] = useState(null);
+  const [adaptiveLoading, setAdaptiveLoading] = useState(false);
+  const [adaptiveError, setAdaptiveError] = useState("");
+
+  // Temporary backend-verified motion-prompt approvals.
+  // These are not video approvals and are not persisted.
+  const [adaptivePromptApprovals, setAdaptivePromptApprovals] =
+    useState({});
+  const [adaptiveApprovalLoading, setAdaptiveApprovalLoading] =
+    useState(null);
+  const [adaptiveApprovalError, setAdaptiveApprovalError] =
+    useState("");
+
+  // References for checking asynchronous approval responses.
+  const adaptivePlanRef = useRef(adaptiveShotPlan);
+  const adaptiveApprovalRequestRef = useRef(0);
+
+
+
+  // Invalidate temporary approvals whenever the active plan changes.
+  // Pending approval responses must not approve an outdated plan.
+  useEffect(() => {
+    adaptivePlanRef.current = adaptiveShotPlan;
+    adaptiveApprovalRequestRef.current += 1;
+    setAdaptivePromptApprovals({});
+    setAdaptiveApprovalLoading(null);
+    setAdaptiveApprovalError("");
+  }, [adaptiveShotPlan]);
+
   const [videoLoading, setVideoLoading] = useState(false);
   const [generatingImageScene, setGeneratingImageScene] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
+
+
+useEffect(() => {
+  if (!storyboard) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(
+      "ai-film-studio-autosave",
+      JSON.stringify({
+        storyboard,
+        script,
+        topic,
+        projectTitle,
+        narrationSpeed,
+        videoLength,
+        audience,
+        style,
+        savedAt: new Date().toISOString(),
+      })
+    );
+  } catch (error) {
+    console.error("Storyboard autosave failed:", error);
+  }
+}, [
+  storyboard,
+  script,
+  topic,
+  projectTitle,
+  narrationSpeed,
+  videoLength,
+  audience,
+  style,
+]);
+
+async function restoreSavedScript() {
+  try {
+    const response = await fetch("/ai_creativity_v2_script.json");
+
+    if (!response.ok) {
+      throw new Error("Saved script not found");
+    }
+
+    const savedScript = await response.json();
+
+    if (
+      !savedScript.title ||
+      !savedScript.introduction ||
+      !Array.isArray(savedScript.scenes) ||
+      !savedScript.conclusion
+    ) {
+      throw new Error("Invalid saved script format");
+    }
+
+    setScript(savedScript);
+    
+    alert("Saved documentary script restored successfully.");
+  } catch (error) {
+    alert(`Could not restore script: ${error.message}`);
+  }
+}
 
   function estimateNarrationDuration(text) {
     if (!text || !text.trim()) {
@@ -79,6 +237,17 @@ function App() {
       return;
     }
 
+    if (storyboard?.scenes?.length) {
+      const confirmed = window.confirm(
+        "Generating a new script will replace the current storyboard. " +
+        "Make sure you have exported your work. Continue?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setLoading(true);
     setScript("");
     setStoryboard(null);
@@ -133,6 +302,32 @@ function App() {
               }
             : scene
         ),
+      };
+    });
+  }
+
+  function handleCinematicPromptChange(sceneNumber, newPrompt) {
+    setStoryboard((previousStoryboard) => {
+      if (!previousStoryboard) return previousStoryboard;
+
+      return {
+        ...previousStoryboard,
+        scenes: previousStoryboard.scenes.map((scene) => {
+          if (
+            scene.scene_number !== sceneNumber ||
+            !scene.cinematic_plan
+          ) {
+            return scene;
+          }
+
+          return {
+            ...scene,
+            cinematic_plan: {
+              ...scene.cinematic_plan,
+              motion_prompt: newPrompt,
+            },
+          };
+        }),
       };
     });
   }
@@ -372,6 +567,436 @@ function App() {
     console.error(error);
   } finally {
     setStoryboardLoading(false);
+  }
+}
+
+
+
+
+
+function handleMigrateAdaptiveDraft() {
+  try {
+    const result = migrateLegacyAdaptiveDraft();
+
+    if (result.status === "migrated") {
+      alert(
+        "Adaptive draft copied into multi-scene storage. " +
+        "The original draft was preserved."
+      );
+    } else if (result.status === "already_present") {
+      alert(
+        "This adaptive draft is already in multi-scene storage."
+      );
+    } else if (result.status === "conflict") {
+      alert(
+        "Migration stopped: a different draft already exists " +
+        "for this scene and timing. Neither draft was changed."
+      );
+    } else {
+      alert("No valid legacy adaptive draft was found.");
+    }
+  } catch (error) {
+    console.error("Adaptive draft migration failed:", error);
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Could not migrate adaptive draft."
+    );
+  }
+}
+
+function handleSaveAdaptiveDraft() {
+  try {
+    const plan = adaptiveShotPlan?.shot_plan;
+
+    if (
+      !plan ||
+      !adaptiveShotPlan?.specification ||
+      !adaptiveDurations
+    ) {
+      throw new Error("Prepare a verified shot plan first.");
+    }
+
+    if (
+      plan.storyboard_fingerprint !==
+        adaptiveDurations.storyboard_fingerprint ||
+      plan.timing_sha256 !==
+        adaptiveShotPlan.specification.timing_sha256
+    ) {
+      throw new Error("Adaptive plan identity mismatch.");
+    }
+
+    const draft = {
+      schema_version: 1,
+      storyboard_fingerprint: plan.storyboard_fingerprint,
+      scene_number: plan.scene_number,
+      strategy: plan.strategy,
+      timing_sha256: plan.timing_sha256,
+      clips: plan.clips.map((clip) => ({
+        clip_number: clip.clip_number,
+        motion_prompt: clip.motion_prompt,
+        prompt_locked: clip.prompt_locked,
+      })),
+    };
+
+    saveAdaptiveDraftToCollection(draft);
+
+    alert(
+      "Adaptive draft saved in multi-scene browser storage. " +
+      "No backend files or videos were changed."
+    );
+  } catch (error) {
+    console.error("Adaptive draft save failed:", error);
+    alert(error.message || "Could not save adaptive draft.");
+  }
+}
+
+async function handleApproveAdaptivePrompt(clipNumber) {
+  const current = adaptivePlanRef.current;
+  const plan = current?.shot_plan;
+
+  if (!plan?.clips || !Number.isInteger(clipNumber)) {
+    setAdaptiveApprovalError("No valid shot plan is selected.");
+    return;
+  }
+
+  const clip = plan.clips.find(
+    (item) => item.clip_number === clipNumber
+  );
+
+  if (!clip || clip.prompt_locked) {
+    setAdaptiveApprovalError("This clip cannot be approved.");
+    return;
+  }
+
+  if (!clip.motion_prompt?.trim()) {
+    setAdaptiveApprovalError("Enter a motion prompt first.");
+    return;
+  }
+
+  if (adaptiveApprovalLoading !== null) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Approve the current motion prompt for Clip ${clipNumber}? ` +
+    "This approves prompt text only. No video will be generated."
+  );
+
+  if (!confirmed) return;
+
+  const requestVersion = ++adaptiveApprovalRequestRef.current;
+  const submittedPlan = structuredClone(plan);
+  const submittedPrompt = clip.motion_prompt;
+
+  setAdaptiveApprovalLoading(clipNumber);
+  setAdaptiveApprovalError("");
+
+  try {
+    const response = await fetch(
+      "http://localhost:8000/approve-adaptive-motion-prompt",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scene_number: plan.scene_number,
+          strategy: plan.strategy,
+          clip_number: clipNumber,
+          shot_plan: submittedPlan,
+          confirmed: true,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (requestVersion !== adaptiveApprovalRequestRef.current) {
+      return;
+    }
+
+    const latestPlan = adaptivePlanRef.current?.shot_plan;
+    const latestClip = latestPlan?.clips?.find(
+      (item) => item.clip_number === clipNumber
+    );
+
+    if (
+      latestPlan !== plan ||
+      !latestClip ||
+      latestClip.prompt_locked ||
+      latestClip.motion_prompt !== submittedPrompt
+    ) {
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        typeof result.detail === "string"
+          ? result.detail
+          : "Motion-prompt approval failed."
+      );
+    }
+
+    if (
+      result.approved !== true ||
+      result.trusted_assets_verified !== true ||
+      result.saved_to_disk !== false ||
+      result.video_generated !== false ||
+      result.approval?.clip_number !== clipNumber
+    ) {
+      throw new Error("Invalid approval response.");
+    }
+
+    setAdaptivePromptApprovals((previous) => ({
+      ...previous,
+      [clipNumber]: {
+        record: result.approval,
+        prompt: submittedPrompt,
+        plan,
+      },
+    }));
+  } catch (error) {
+    if (requestVersion === adaptiveApprovalRequestRef.current) {
+      setAdaptiveApprovalError(
+        error instanceof Error
+          ? error.message
+          : "Could not approve motion prompt."
+      );
+    }
+  } finally {
+    if (requestVersion === adaptiveApprovalRequestRef.current) {
+      setAdaptiveApprovalLoading(null);
+    }
+  }
+}
+
+function handleAdaptivePromptChange(clipNumber, newPrompt) {
+  if (
+    !Number.isInteger(clipNumber) ||
+    clipNumber < 1 ||
+    typeof newPrompt !== "string" ||
+    newPrompt.length > 900
+  ) {
+    return;
+  }
+
+  // Invalidate pending approvals immediately on an edit.
+  adaptiveApprovalRequestRef.current += 1;
+  setAdaptivePromptApprovals({});
+  setAdaptiveApprovalLoading(null);
+  setAdaptiveApprovalError("");
+
+  setAdaptiveShotPlan((current) => {
+    if (!current?.shot_plan?.clips) {
+      return current;
+    }
+
+    const matches = current.shot_plan.clips.filter(
+      (clip) => clip.clip_number === clipNumber
+    );
+
+    if (
+      matches.length !== 1 ||
+      matches[0].prompt_locked === true
+    ) {
+      return current;
+    }
+
+    return {
+      ...current,
+      shot_plan: {
+        ...current.shot_plan,
+        clips: current.shot_plan.clips.map((clip) =>
+          clip.clip_number === clipNumber
+            ? {
+                ...clip,
+                motion_prompt: newPrompt,
+                prompt_source: "manual_edit",
+              }
+            : clip
+        ),
+      },
+    };
+  });
+}
+
+async function handlePrepareAdaptiveShots() {
+  if (!storyboard?.scenes?.length) {
+    setAdaptiveError("Please load a storyboard first.");
+    return;
+  }
+
+  const scenes = storyboard.scenes;
+  const sceneIndex = Number(adaptiveSceneNumber) - 1;
+
+  if (
+    !Number.isInteger(sceneIndex) ||
+    sceneIndex < 0 ||
+    sceneIndex >= scenes.length
+  ) {
+    setAdaptiveError("Please select a valid scene.");
+    return;
+  }
+
+  setAdaptiveLoading(true);
+  setAdaptiveError("");
+  setAdaptiveDurations(null);
+  setAdaptiveShotPlan(null);
+
+  try {
+    // Read existing saved audio. This endpoint never generates media.
+    const durationResponse = await fetch(
+      "http://localhost:8000/saved-narration-durations",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenes }),
+      }
+    );
+
+    const durationData = await durationResponse.json();
+
+    if (!durationResponse.ok) {
+      throw new Error(
+        durationData.detail ||
+        "Saved narration durations are unavailable."
+      );
+    }
+
+    if (
+      durationData.scene_count !== scenes.length ||
+      durationData.audio_verified !== true
+    ) {
+      throw new Error("Saved narration verification failed.");
+    }
+
+    const selectedDuration = durationData.durations[sceneIndex];
+
+    if (
+      selectedDuration?.scene_number !== sceneIndex + 1 ||
+      !Number.isFinite(selectedDuration.duration_seconds) ||
+      selectedDuration.duration_seconds <= 0
+    ) {
+      throw new Error("Invalid saved narration duration.");
+    }
+
+    // Inspect existing saved prompts and protected video clips.
+    const assetsResponse = await fetch(
+      "http://localhost:8000/existing-cinematic-assets",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenes,
+          scene_number: sceneIndex + 1,
+        }),
+      }
+    );
+
+    const assetsData = await assetsResponse.json();
+
+    if (!assetsResponse.ok) {
+      throw new Error(
+        assetsData.detail ||
+        "Could not inspect existing cinematic assets."
+      );
+    }
+
+    if (
+      assetsData.read_only !== true ||
+      assetsData.scene_number !== sceneIndex + 1 ||
+      assetsData.storyboard_fingerprint !==
+        durationData.storyboard_fingerprint ||
+      !Array.isArray(assetsData.locked_clips) ||
+      !assetsData.existing_prompts ||
+      typeof assetsData.existing_prompts !== "object"
+    ) {
+      throw new Error("Existing asset verification failed.");
+    }
+
+    // Planning only: no OpenAI, Runway, or media generation.
+    const planningResponse = await fetch(
+      "http://localhost:8000/prepare-adaptive-shots",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenes,
+          scene: scenes[sceneIndex],
+          scene_number: sceneIndex + 1,
+          narration_duration: selectedDuration.duration_seconds,
+          strategy: adaptiveStrategy,
+          existing_prompts: assetsData.existing_prompts,
+          locked_clips: assetsData.locked_clips,
+        }),
+      }
+    );
+
+    const planningData = await planningResponse.json();
+
+    if (!planningResponse.ok) {
+      throw new Error(
+        planningData.detail ||
+        "Could not prepare adaptive cinematic shots."
+      );
+    }
+
+    if (
+      planningData.ai_executed !== false ||
+      planningData.video_generated !== false ||
+      planningData.scene_number !== sceneIndex + 1 ||
+      planningData.storyboard_fingerprint !==
+        durationData.storyboard_fingerprint
+    ) {
+      throw new Error("Adaptive planning verification failed.");
+    }
+
+    // Restore only editable prompts from a matching browser draft.
+    // The backend-verified plan remains authoritative.
+    let displayPlan = planningData;
+
+    const planIdentity = {
+      schema_version: 1,
+      storyboard_fingerprint:
+        planningData.shot_plan.storyboard_fingerprint,
+      scene_number: planningData.shot_plan.scene_number,
+      strategy: planningData.shot_plan.strategy,
+      timing_sha256: planningData.shot_plan.timing_sha256,
+      clips: planningData.shot_plan.clips.map((clip) => ({
+        clip_number: clip.clip_number,
+        motion_prompt: clip.motion_prompt,
+        prompt_locked: clip.prompt_locked,
+      })),
+    };
+
+    try {
+      const savedDraft = findAdaptiveDraftInCollection(
+        planIdentity
+      );
+
+      if (savedDraft) {
+        displayPlan = restoreVerifiedAdaptiveDraft(
+          savedDraft,
+          planningData
+        );
+      }
+    } catch (restoreError) {
+      console.info(
+        "Saved adaptive draft not restored:",
+        restoreError.message
+      );
+    }
+
+    setAdaptiveDurations(durationData);
+    setAdaptiveShotPlan(displayPlan);
+  } catch (error) {
+    console.error("Adaptive planning error:", error);
+    setAdaptiveError(
+      error instanceof Error
+        ? error.message
+        : "Could not prepare adaptive cinematic shots."
+    );
+  } finally {
+    setAdaptiveLoading(false);
   }
 }
 
@@ -738,6 +1363,19 @@ async function handleGenerateVideo() {
         >
           {loading ? "Generating Script..." : "Generate Script"}
         </button>
+      
+        <button
+          type="button"
+          onClick={restoreSavedScript}
+          style={{
+            marginLeft: "10px",
+            padding: "12px 20px",
+            cursor: "pointer",
+          }}
+        >
+          Restore Saved Script
+        </button>
+
       </form>
 
       {script && (
@@ -1160,6 +1798,70 @@ async function handleGenerateVideo() {
                 </div>
               </h3>
 
+
+              {/* AI Cinematic Director plan */}
+              <details
+                style={{
+                  marginTop: "15px",
+                  padding: "12px",
+                  backgroundColor: "#f0f7ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "8px",
+                }}
+              >
+                <summary
+                  style={{
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    color: "#1e40af",
+                  }}
+                >
+                  🎥 AI Cinematic Plan
+                  {scene.cinematic_plan ? " — Ready" : " — Not available"}
+                </summary>
+
+                {scene.cinematic_plan ? (
+                  <div style={{ marginTop: "12px", lineHeight: "1.6" }}>
+                    <p><strong>Shot:</strong> {scene.cinematic_plan.shot_description}</p>
+                    <p><strong>Subject movement:</strong> {scene.cinematic_plan.subject_action}</p>
+                    <p><strong>Camera movement:</strong> {scene.cinematic_plan.camera_movement}</p>
+                    <label
+                      htmlFor={`cinematic-prompt-${scene.scene_number}`}
+                      style={{ display: "block", fontWeight: "bold" }}
+                    >
+                      Runway motion prompt:
+                    </label>
+
+                    <textarea
+                      id={`cinematic-prompt-${scene.scene_number}`}
+                      value={scene.cinematic_plan.motion_prompt}
+                      onChange={(event) =>
+                        handleCinematicPromptChange(
+                          scene.scene_number,
+                          event.target.value
+                        )
+                      }
+                      rows={6}
+                      maxLength={900}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        padding: "10px",
+                        marginTop: "8px",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "14px",
+                        lineHeight: "1.6",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p style={{ marginTop: "10px", color: "#64748b" }}>
+                    No cinematic plan was returned for this scene.
+                  </p>
+                )}
+              </details>
+
               <div
                 style={{
                   display: "grid",
@@ -1345,6 +2047,289 @@ async function handleGenerateVideo() {
           ))}
         </section>
       )}
+
+      {storyboard?.scenes?.length > 0 && (
+        <section
+          style={{
+            marginTop: "30px",
+            padding: "18px",
+            border: "1px solid #cbd5e1",
+            borderRadius: "10px",
+            textAlign: "left",
+          }}
+        >
+          <h2>Adaptive Cinematic Shot Planning (Preview)</h2>
+
+          <p>
+            Prepare cinematic shots using existing saved narration.
+            This preview does not generate or overwrite media.
+          </p>
+
+          <label htmlFor="adaptive-scene-select">
+            Scene:
+          </label>
+
+          <select
+            id="adaptive-scene-select"
+            value={adaptiveSceneNumber}
+            onChange={(event) => {
+              setAdaptiveSceneNumber(Number(event.target.value));
+              setAdaptiveDurations(null);
+              setAdaptiveShotPlan(null);
+              setAdaptiveError("");
+            }}
+            style={{ display: "block", margin: "8px 0 14px" }}
+          >
+            {storyboard.scenes.map((scene, index) => (
+              <option key={index} value={index + 1}>
+                {index + 1}. {scene.title}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="adaptive-strategy-select">
+            Planning strategy:
+          </label>
+
+          <select
+            id="adaptive-strategy-select"
+            value={adaptiveStrategy}
+            onChange={(event) => {
+              setAdaptiveStrategy(event.target.value);
+              setAdaptiveShotPlan(null);
+              setAdaptiveError("");
+            }}
+            style={{ display: "block", margin: "8px 0 14px" }}
+          >
+            <option value="balanced">Balanced</option>
+            <option value="cinematic">Cinematic</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={handlePrepareAdaptiveShots}
+            disabled={adaptiveLoading}
+          >
+            {adaptiveLoading
+              ? "Preparing..."
+              : "Prepare Cinematic Shots"}
+          </button>
+
+          {adaptiveError && (
+            <p role="alert" style={{ color: "#b91c1c" }}>
+              {adaptiveError}
+            </p>
+          )}
+
+          {adaptiveShotPlan && adaptiveDurations && (
+            <div style={{ marginTop: "18px" }}>
+              <h3>Prepared Shot Plan</h3>
+
+              <p>
+                Verified narration duration:{" "}
+                <strong>
+                  {adaptiveDurations.durations[
+                    adaptiveShotPlan.scene_number - 1
+                  ]?.duration_seconds.toFixed(2)} seconds
+                </strong>
+              </p>
+
+              <p>
+                Scene: {adaptiveShotPlan.scene_number}
+              </p>
+
+              <p>
+                AI executed:{" "}
+                {adaptiveShotPlan.ai_executed ? "Yes" : "No"}
+              </p>
+
+              <p>
+                Video generated:{" "}
+                {adaptiveShotPlan.video_generated ? "Yes" : "No"}
+              </p>
+
+
+              <div style={{ marginTop: "20px" }}>
+                <h3>Adaptive Clip Motion Prompts</h3>
+                <button
+                  type="button"
+                  onClick={handleSaveAdaptiveDraft}
+                  style={{ marginBottom: "12px" }}
+                >
+                  Save Adaptive Draft (Browser Only)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMigrateAdaptiveDraft}
+                  style={{
+                    marginLeft: "8px",
+                    marginBottom: "12px",
+                  }}
+                >
+                  Copy Existing Draft to Multi-Scene Storage
+                </button>
+
+
+                <p style={{ fontSize: "13px", color: "#475569" }}>
+                  Changes are temporary and remain in this browser
+                  session. No files are saved or videos generated.
+                </p>
+
+                {adaptiveShotPlan.shot_plan.clips.map((clip) => (
+                  <div
+                    key={clip.clip_number}
+                    style={{
+                      marginTop: "14px",
+                      padding: "14px",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <p style={{ fontWeight: "bold" }}>
+                      Clip {clip.clip_number} —{" "}
+                      {clip.duration_seconds} seconds
+                    </p>
+
+                    <p style={{ fontSize: "13px" }}>
+                      Status:{" "}
+                      {clip.prompt_locked
+                        ? "Locked — existing video protected"
+                        : "Editable — not locked"}
+                    </p>
+
+                    <label
+                      htmlFor={`adaptive-prompt-${clip.clip_number}`}
+                      style={{
+                        display: "block",
+                        marginBottom: "6px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Motion prompt
+                    </label>
+
+                    <textarea
+                      id={`adaptive-prompt-${clip.clip_number}`}
+                      value={clip.motion_prompt}
+                      readOnly={clip.prompt_locked}
+                      maxLength={900}
+                      rows={6}
+                      onChange={(event) =>
+                        handleAdaptivePromptChange(
+                          clip.clip_number,
+                          event.target.value
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e1",
+                        backgroundColor: clip.prompt_locked
+                          ? "#f1f5f9"
+                          : "#ffffff",
+                        fontSize: "14px",
+                        lineHeight: "1.5",
+                      }}
+                    />
+
+                    <p style={{ fontSize: "12px", color: "#64748b" }}>
+                      {(clip.motion_prompt || "").length}/900 characters
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleApproveAdaptivePrompt(clip.clip_number)
+                      }
+                      disabled={
+                        clip.prompt_locked ||
+                        !clip.motion_prompt?.trim() ||
+                        adaptiveApprovalLoading !== null ||
+                        adaptiveLoading
+                      }
+                      style={{ marginTop: "8px" }}
+                    >
+                      {adaptiveApprovalLoading === clip.clip_number
+                        ? "Approving..."
+                        : "Approve Motion Prompt"}
+                    </button>
+
+                    {adaptivePromptApprovals[clip.clip_number]?.plan ===
+                      adaptiveShotPlan.shot_plan &&
+                      adaptivePromptApprovals[clip.clip_number]?.prompt ===
+                        clip.motion_prompt && (
+                        <p
+                          role="status"
+                          style={{
+                            color: "#166534",
+                            fontSize: "13px",
+                          }}
+                        >
+                          Motion prompt approved for this session.
+                          No video generated.
+                        </p>
+                      )}
+
+                    {adaptiveApprovalError && (
+                      <p
+                        role="alert"
+                        style={{
+                          color: "#b91c1c",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {adaptiveApprovalError}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <details>
+                <summary>View proposed shot plan and timing</summary>
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    fontSize: "12px",
+                  }}
+                >
+                  {JSON.stringify(
+                    {
+                      specification: adaptiveShotPlan.specification,
+                      shot_plan: adaptiveShotPlan.shot_plan,
+                      preparation: adaptiveShotPlan.preparation,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
+              </details>
+
+              <details>
+                <summary>View AI prompt instructions (not executed)</summary>
+                <pre
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    fontSize: "12px",
+                  }}
+                >
+                  {JSON.stringify(
+                    adaptiveShotPlan.ai_prompt,
+                    null,
+                    2
+                  )}
+                </pre>
+              </details>
+            </div>
+          )}
+        </section>
+      )}
+
       {storyboard && (
         <section style={{ marginTop: "30px", marginBottom: "30px" }}>
           <h2>Generate Your Video</h2>

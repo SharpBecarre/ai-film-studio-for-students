@@ -20,6 +20,9 @@ ALLOW_RUNWAY_RETRY = os.getenv(
     "ALLOW_RUNWAY_RETRY", "false"
 ).lower() == "true"
 
+from multi_clip_renderer import assemble_scene_clips
+MULTI_CLIP_MODE = os.getenv("MULTI_CLIP_MODE", "false").lower() == "true"
+
 def create_scene_image(scene, output_path):
     """Create a 1280x720 image from a storyboard scene."""
 
@@ -309,7 +312,20 @@ def render_storyboard(scenes, client, output_path):
     if not isinstance(scenes, list) or not scenes:
         raise ValueError("Storyboard must contain at least one scene.")
 
+    if MULTI_CLIP_MODE and not RESUME_FOLDER:
+        raise RuntimeError(
+            "Multi-clip mode requires an existing resume folder. "
+            "No paid generation will be attempted."
+        )
+
     output_path = Path(output_path).resolve()
+
+    if MULTI_CLIP_MODE and output_path.exists():
+        raise FileExistsError(
+            f"Multi-clip mode refuses to overwrite existing "
+            f"documentary: {output_path}"
+        )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if True:
@@ -362,6 +378,21 @@ def render_storyboard(scenes, client, output_path):
 
             moving_path = temp_dir / f"moving_{index}.mp4"
 
+            if MULTI_CLIP_MODE:
+                if not image_path.is_file():
+                    raise FileNotFoundError(
+                        f"Scene {index + 1}: existing storyboard image "
+                        f"missing: {image_path}. "
+                        "No paid generation will be attempted."
+                    )
+
+                if not audio_path.is_file():
+                    raise FileNotFoundError(
+                        f"Scene {index + 1}: existing narration "
+                        f"missing: {audio_path}. "
+                        "No paid generation will be attempted."
+                    )
+
             review = load_review(temp_dir, index + 1)
             review_status = (
                 review.get("status") if review else None
@@ -370,12 +401,57 @@ def render_storyboard(scenes, client, output_path):
             can_reuse_scene = (
                 RESUME_FOLDER
                 and not USE_RUNWAY
+                and not MULTI_CLIP_MODE
                 and is_valid_narrated_scene(video_path)
             )
 
             if can_reuse_scene:
                 print(f"Reusing completed scene {index + 1}: {video_path}", flush=True)
                 scene_videos.append(video_path)
+                continue
+
+            if MULTI_CLIP_MODE:
+                # Validate existing assets without deleting or regenerating them.
+                try:
+                    with Image.open(image_path) as saved_image:
+                        saved_image.verify()
+                except Exception as error:
+                    raise ValueError(
+                        f"Scene {index + 1}: existing storyboard "
+                        f"image is invalid: {error}. "
+                        "No paid generation will be attempted."
+                    ) from error
+
+                audio_probe = subprocess.run(
+                    [
+                        "ffprobe", "-v", "error",
+                        "-select_streams", "a:0",
+                        "-show_entries", "stream=codec_type",
+                        "-of", "default=noprint_wrappers=1:nokey=1",
+                        str(audio_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+                if (
+                    audio_probe.returncode != 0
+                    or audio_probe.stdout.strip() != "audio"
+                ):
+                    raise ValueError(
+                        f"Scene {index + 1}: existing narration "
+                        "audio is invalid. "
+                        "No paid generation will be attempted."
+                    )
+
+                multiclip_video = render_multiclip_scene_from_resume(
+                    resume_folder=temp_dir,
+                    scene_number=index + 1,
+                    storyboard_fingerprint_value=fingerprint,
+                )
+
+                scene_videos.append(multiclip_video)
                 continue
 
             if RESUME_FOLDER and image_path.is_file():
@@ -565,3 +641,245 @@ def render_storyboard(scenes, client, output_path):
 
     return output_path
 
+def prepare_multiclip_scene(
+    scene_directory,
+    narration_path,
+    storyboard_fingerprint_value,
+    scene_number,
+    clip_duration=5.0,
+    crossfade=0.5,
+):
+    """Prepare approved clips without generating or modifying media."""
+    from cinematic_director import calculate_clip_count
+    from multi_clip_renderer import (
+        probe_duration,
+        find_approved_scene_clips,
+    )
+
+    narration_path = Path(narration_path)
+
+    if not narration_path.is_file():
+        raise FileNotFoundError(
+            f"Narration file missing: {narration_path}. "
+            "No paid generation will be attempted."
+        )
+
+    narration_duration = probe_duration(narration_path)
+
+    if narration_duration <= 0:
+        raise ValueError("Narration duration must be positive.")
+
+    required_count = calculate_clip_count(
+        narration_duration,
+        clip_duration=clip_duration,
+        crossfade_duration=crossfade,
+    )
+
+    clip_paths = find_approved_scene_clips(
+        scene_directory,
+        required_count=required_count,
+        require_approval=True,
+        storyboard_fingerprint=storyboard_fingerprint_value,
+        scene_number=scene_number,
+    )
+
+    return {
+        "narration_duration": narration_duration,
+        "required_count": required_count,
+        "clip_paths": clip_paths,
+    }
+
+def render_approved_multiclip_scene(
+    scene_directory,
+    narration_path,
+    output_path,
+    storyboard_fingerprint_value,
+    scene_number,
+    clip_duration=5.0,
+    crossfade=0.5,
+):
+    """Assemble only verified, approved clips for one scene."""
+
+    output_path = Path(output_path)
+
+    if output_path.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite existing scene: {output_path}"
+        )
+
+    prepared = prepare_multiclip_scene(
+        scene_directory=scene_directory,
+        narration_path=narration_path,
+        storyboard_fingerprint_value=storyboard_fingerprint_value,
+        scene_number=scene_number,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+    metadata_path = output_path.parent / "render_metadata.json"
+
+    if metadata_path.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite existing metadata: {metadata_path}"
+        )
+
+    rendered = assemble_scene_clips(
+        clip_paths=prepared["clip_paths"],
+        narration_path=narration_path,
+        output_path=output_path,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+    from multi_clip_renderer import build_render_metadata
+    import json
+
+    metadata = build_render_metadata(
+        storyboard_fingerprint_value=storyboard_fingerprint_value,
+        scene_number=scene_number,
+        narration_path=narration_path,
+        clip_paths=prepared["clip_paths"],
+        output_path=output_path,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+    with metadata_path.open("x", encoding="utf-8") as file:
+        json.dump(metadata, file, indent=2)
+        file.write("\n")
+
+    return rendered
+
+def get_multiclip_scene_directory(resume_folder, scene_number):
+    """Return the existing multi-clip directory for a scene."""
+
+    if (
+        not isinstance(scene_number, int)
+        or isinstance(scene_number, bool)
+        or scene_number < 1
+    ):
+        raise ValueError("Scene number must be a positive integer.")
+
+    root = Path(resume_folder).resolve()
+
+    if not root.is_dir():
+        raise FileNotFoundError(
+            f"Resume folder missing: {root}"
+        )
+
+    scene_directory = (
+        root / "multiclip" / f"scene_{scene_number:03d}"
+    )
+
+    if not scene_directory.is_dir():
+        raise FileNotFoundError(
+            f"Multi-clip directory missing for scene "
+            f"{scene_number}: {scene_directory}"
+        )
+
+    return scene_directory
+
+def render_multiclip_scene_from_resume(
+    resume_folder,
+    scene_number,
+    storyboard_fingerprint_value,
+    clip_duration=5.0,
+    crossfade=0.5,
+):
+    """Render one approved multi-clip scene from saved assets."""
+
+    scene_directory = get_multiclip_scene_directory(
+        resume_folder,
+        scene_number,
+    )
+
+    root = Path(resume_folder).resolve()
+
+    narration_path = (
+        root / f"scene_{scene_number - 1}.mp3"
+    )
+
+    output_path = (
+        scene_directory / "rendered_scene.mp4"
+    )
+
+    metadata_path = scene_directory / "render_metadata.json"
+
+    if output_path.exists() or metadata_path.exists():
+        reusable = find_reusable_multiclip_scene(
+            scene_directory=scene_directory,
+            narration_path=narration_path,
+            storyboard_fingerprint_value=storyboard_fingerprint_value,
+            scene_number=scene_number,
+            clip_duration=clip_duration,
+            crossfade=crossfade,
+        )
+
+        print(
+            f"Reusing verified multi-clip scene {scene_number}: "
+            f"{reusable}",
+            flush=True,
+        )
+        return reusable
+
+    return render_approved_multiclip_scene(
+        scene_directory=scene_directory,
+        narration_path=narration_path,
+        output_path=output_path,
+        storyboard_fingerprint_value=storyboard_fingerprint_value,
+        scene_number=scene_number,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+def find_reusable_multiclip_scene(
+    scene_directory,
+    narration_path,
+    storyboard_fingerprint_value,
+    scene_number,
+    clip_duration=5.0,
+    crossfade=0.5,
+):
+    """Return a completed scene only when approvals and metadata match."""
+
+    import json
+    from multi_clip_renderer import validate_render_metadata
+
+    scene_directory = Path(scene_directory).resolve()
+    output_path = scene_directory / "rendered_scene.mp4"
+    metadata_path = scene_directory / "render_metadata.json"
+
+    if not output_path.is_file():
+        raise FileNotFoundError(
+            f"Completed scene missing: {output_path}"
+        )
+
+    if not metadata_path.is_file():
+        raise FileNotFoundError(
+            f"Completed scene metadata missing: {metadata_path}"
+        )
+
+    prepared = prepare_multiclip_scene(
+        scene_directory=scene_directory,
+        narration_path=narration_path,
+        storyboard_fingerprint_value=storyboard_fingerprint_value,
+        scene_number=scene_number,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+    with metadata_path.open("r", encoding="utf-8") as file:
+        metadata = json.load(file)
+
+    validate_render_metadata(
+        metadata=metadata,
+        storyboard_fingerprint_value=storyboard_fingerprint_value,
+        scene_number=scene_number,
+        narration_path=narration_path,
+        clip_paths=prepared["clip_paths"],
+        output_path=output_path,
+        clip_duration=clip_duration,
+        crossfade=crossfade,
+    )
+
+    return output_path

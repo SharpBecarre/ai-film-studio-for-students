@@ -353,3 +353,191 @@ def storyboard_image_fingerprint(image_path):
 
     return digest.hexdigest()
 
+
+
+def calculate_clip_count(
+    required_duration,
+    clip_duration,
+    crossfade_duration,
+):
+    """Calculate the minimum number of overlapping video clips."""
+    import math
+
+    if required_duration <= 0:
+        raise ValueError("Required duration must be positive.")
+    if clip_duration <= 0:
+        raise ValueError("Clip duration must be positive.")
+    if not 0 <= crossfade_duration < clip_duration:
+        raise ValueError("Invalid crossfade duration.")
+
+    return max(
+        1,
+        math.ceil(
+            (required_duration - crossfade_duration)
+            / (clip_duration - crossfade_duration)
+        ),
+    )
+
+
+def calculate_shot_timeline(
+    required_duration,
+    clip_duration=5.0,
+    crossfade_duration=0.5,
+):
+    """Calculate overlapping clip positions for a scene."""
+    count = calculate_clip_count(
+        required_duration,
+        clip_duration,
+        crossfade_duration,
+    )
+
+    timeline = []
+    step = clip_duration - crossfade_duration
+
+    for index in range(count):
+        start = index * step
+        end = min(start + clip_duration, required_duration)
+
+        timeline.append({
+            "clip_number": index + 1,
+            "start_seconds": round(start, 3),
+            "end_seconds": round(end, 3),
+            "duration_seconds": round(end - start, 3),
+        })
+
+    return timeline
+
+
+def build_timed_multi_shot_prompt(
+    scene,
+    required_duration,
+    clip_duration=5.0,
+    crossfade_duration=0.5,
+):
+    """Build AI instructions for narration-aware multi-shot planning."""
+    timeline = calculate_shot_timeline(
+        required_duration,
+        clip_duration,
+        crossfade_duration,
+    )
+
+    return f"""
+You are an AI Cinematic Director planning a sequence
+of image-to-video shots for one documentary scene.
+
+Scene title: {scene.get("title", "")}
+Narration: {scene.get("narration", "")}
+Original visual: {scene.get("visual", "")}
+
+Required visual duration: {required_duration:.2f} seconds
+Generated clip duration: {clip_duration:.2f} seconds
+Crossfade duration: {crossfade_duration:.2f} seconds
+
+SHOT TIMELINE:
+{json.dumps(timeline, indent=2)}
+
+Requirements:
+- Return exactly {len(timeline)} distinct shots.
+- Use ONE existing storyboard image for every shot.
+- Match shot ideas to the narration's progression.
+- Use different framing, camera movements, or subtle actions.
+- Allow closer views of details already visible in the image.
+- Preserve subjects, setting, and visual continuity.
+- Do not invent new objects or change existing artwork.
+- Do not include cuts or transitions inside generated clips.
+- Crossfades are applied later during editing.
+- Narration remains uninterrupted within the scene.
+- Follow the supplied shot timeline.
+- Each motion prompt must be 900 characters or fewer.
+
+Return ONLY valid JSON:
+{{
+  "clips": [
+    {{
+      "clip_number": 1,
+      "shot_description": "...",
+      "subject_action": "...",
+      "camera_movement": "...",
+      "motion_prompt": "..."
+    }}
+  ]
+}}
+
+Return exactly {len(timeline)} clips.
+""".strip()
+
+
+def validate_multi_shot_plan(plan, timeline):
+    """Validate all cinematic shots before video generation."""
+    if not isinstance(plan, dict):
+        raise ValueError("Multi-shot plan must be a JSON object.")
+
+    clips = plan.get("clips")
+    if not isinstance(clips, list):
+        raise ValueError("Multi-shot plan must contain a clips list.")
+
+    if len(clips) != len(timeline):
+        raise ValueError(
+            f"Expected {len(timeline)} clips, got {len(clips)}."
+        )
+
+    for index, (clip, timing) in enumerate(
+        zip(clips, timeline), start=1
+    ):
+        if not isinstance(clip, dict):
+            raise ValueError(f"Clip {index} must be an object.")
+
+        if type(clip.get("clip_number")) is not int:
+            raise ValueError(f"Clip {index} has invalid numbering.")
+
+        if clip["clip_number"] != timing["clip_number"]:
+            raise ValueError(f"Clip {index} is out of order.")
+
+        validate_cinematic_plan(clip)
+
+    return plan
+
+
+def generate_multi_shot_plan(
+    scene,
+    narration_duration,
+    client,
+    clip_duration=5.0,
+    crossfade_duration=0.5,
+):
+    """Generate and validate a narration-aware multi-shot plan.
+
+    Makes one OpenAI planning request when explicitly called.
+    Does not generate video or modify the storyboard.
+    """
+    timeline = calculate_shot_timeline(
+        narration_duration,
+        clip_duration,
+        crossfade_duration,
+    )
+
+    prompt = build_timed_multi_shot_prompt(
+        scene,
+        narration_duration,
+        clip_duration,
+        crossfade_duration,
+    )
+
+    response = client.responses.create(
+        model="gpt-6-luna",
+        input=prompt,
+    )
+
+    try:
+        plan = json.loads(response.output_text)
+    except (json.JSONDecodeError, TypeError) as error:
+        raise ValueError(
+            "AI returned invalid multi-shot plan JSON."
+        ) from error
+
+    validate_multi_shot_plan(plan, timeline)
+
+    return {
+        "timeline": timeline,
+        "plan": plan,
+    }
