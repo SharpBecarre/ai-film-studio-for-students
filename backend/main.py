@@ -449,11 +449,66 @@ def approve_adaptive_motion_prompt(data: dict):
             detail=str(error),
         ) from error
 
+@app.post("/preview-adaptive-runway")
+def preview_adaptive_runway(data: dict):
+    """Preview a trusted Runway request without generating video."""
+    from fastapi import HTTPException
+    from pathlib import Path
+    from adaptive_trusted_approval_plan import build_trusted_approval_plan
+    from adaptive_runway_preview import build_adaptive_runway_preview
+
+    project_folder = (
+        Path(__file__).resolve().parent
+        / "generated_videos"
+        / "ocean_city_cinematic"
+    )
+    storyboard_path = project_folder / "storyboard.json"
+
+    try:
+        storyboard = json.loads(
+            storyboard_path.read_text(encoding="utf-8")
+        )
+
+        if not isinstance(storyboard, dict):
+            raise ValueError("Invalid saved storyboard.")
+
+        verified = build_trusted_approval_plan(
+            scenes=storyboard.get("scenes"),
+            scene_number=data.get("scene_number"),
+            strategy=data.get("strategy"),
+            submitted_plan=data.get("shot_plan"),
+        )
+
+        return build_adaptive_runway_preview(
+            plan=verified["shot_plan"],
+            clip_number=data.get("clip_number"),
+            approval_record=data.get("approval"),
+            storyboard_path=storyboard_path,
+        )
+
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=403,
+            detail=str(error),
+        ) from error
+    except (
+        ValueError,
+        TypeError,
+        KeyError,
+        AttributeError,
+        FileNotFoundError,
+        OSError,
+    ) as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
 @app.post("/generate-video")
 def generate_video(data: dict):
     import uuid
     from pathlib import Path
+    import json
     from fastapi import HTTPException
 
     scenes = data.get("scenes")
