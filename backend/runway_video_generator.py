@@ -26,6 +26,12 @@ def save_runway_task_record(path, record):
 def generate_moving_scene(image_path, output_path, prompt):
     """Animate an existing image with Runway Gen-4 Turbo."""
 
+    if os.getenv("ALLOW_RUNWAY_GENERATION", "").strip().lower() != "true":
+        raise PermissionError(
+            "Paid Runway generation is disabled. "
+            "Explicit authorization is required."
+        )
+
     load_dotenv(Path(__file__).parent / ".env")
 
     image_path = Path(image_path)
