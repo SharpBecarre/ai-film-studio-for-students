@@ -27,3 +27,29 @@ def test_runway_generation_requires_authorization(tmp_path):
 
     assert not output_path.exists()
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "authorization_value",
+    ["", "false", "yes", "1", "TRUEE"],
+)
+def test_invalid_authorization_values_are_blocked(
+    tmp_path, authorization_value
+):
+    with patch.dict(
+        os.environ,
+        {"ALLOW_RUNWAY_GENERATION": authorization_value},
+    ):
+        with patch(
+            "backend.runway_video_generator.RunwayML"
+        ) as mock_runway:
+            with pytest.raises(PermissionError):
+                generate_moving_scene(
+                    tmp_path / "test_image.png",
+                    tmp_path / "test_video.mp4",
+                    "Safety test only",
+                )
+
+            mock_runway.assert_not_called()
+
+    assert list(tmp_path.iterdir()) == []
